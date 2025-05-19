@@ -1,0 +1,19 @@
+{
+      "name"                  : "CargoConnect",
+      "marketplaceName"       : [{"en":"Connect Shippingplugin", "de":"Connect Versandplugin"}],
+      "description"           : "A bridge between Cargo International GmbH and PlentyOne",
+      "namespace"             : "CargoConnect",
+      "author"                : "David S.",
+      "type"                  : "shipping",
+      "isClosedSource"        : "False",
+      "serviceProvider"       : "CargoConnect\\Providers\\CargoConnectServiceProvider",
+      "version"               : "0.5",
+      "license"               : "AGPL-3.0",
+      "pluginIcon"            : "icon_plugin_xs.png",
+      "price"                 : 0.00,
+      "shortDescription"      : {"en": "Connect PlentyOne Bridge", "de": "Connect PlentyOne Bridge"},
+      "keywords"              : ["plugin", "shipping"],
+      "authorIcon"            : "icon_author_xs.png",
+      "email"                 : "d.schulz@spedition.de",
+      "phone"                 : "+49 176 32154637"
+}

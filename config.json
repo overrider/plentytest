@@ -1,0 +1,90 @@
+[
+  {
+    "tab": "Zugangsdaten",
+    "key": "mode",
+    "label": "Mode",
+    "type": "dropdown",
+    "possibleValues": {
+      "0": "Test",
+      "1": "Produktivbetrieb"
+    },
+    "default": "1"
+  },
+  {
+    "tab": "Zugangsdaten",
+    "key": "api_token",
+    "label": "Cargo Connect API Token",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Zugangsdaten",
+    "key": "api_url",
+    "label": "API URL",
+    "type": "text",
+    "default": "https://backpack.ironwhale.com/api/plentyconnect"
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_company",
+    "label": "Firma",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_firstname",
+    "label": "Vorname",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_lastname",
+    "label": "Nachname",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_street",
+    "label": "Straße",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_zip",
+    "label": "Postleitzahl",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_city",
+    "label": "Stadt",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_country",
+    "label": "Land",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_phone",
+    "label": "Telefonnummer",
+    "type": "text",
+    "default": ""
+  },
+  {
+    "tab": "Abholadresse",
+    "key": "pickup_email",
+    "label": "E-Mail",
+    "type": "text",
+    "default": ""
+  }
+]
