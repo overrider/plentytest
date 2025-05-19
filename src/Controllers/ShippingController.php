@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 26;
+    private $plugin_revision = 27;
 
     /**
      * ShipmentController constructor.
@@ -218,14 +218,14 @@ class ShippingController extends Controller
                 }
                 catch(\SoapFault $soapFault)
                 {
-                    // handle exception
+                    $this->debugger($soapFault->getMessage());
                 }
 
             }
 
         }
 
-        $this->debugger();
+        $this->debugger((string)$this->plugin_revision);
 
         // return all results to service
         return $this->createOrderResult;
@@ -612,12 +612,12 @@ class ShippingController extends Controller
     }
 
 
-    private function debugger(): void
+    private function debugger(string $message): void
     {
         $url = 'https://webhook.site/69ac9985-ca9d-4b5a-bdd8-e40d28df1b8b';
 
         $data = [
-            'revision' => $this->plugin_revision
+            "message" => $message
         ];
 
         $ch = curl_init($url);
