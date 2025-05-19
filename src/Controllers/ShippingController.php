@@ -94,7 +94,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 10;
+    private $plugin_revision = 11;
 
 	/**
 	 * ShipmentController constructor.
