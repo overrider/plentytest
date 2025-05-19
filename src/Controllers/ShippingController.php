@@ -94,7 +94,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 11;
+    private $plugin_revision = 12;
 
 	/**
 	 * ShipmentController constructor.
@@ -147,7 +147,9 @@ class ShippingController extends Controller
         $api_token = $this->config->get('CargoConnect.api_token', false);
         $api_url = $this->config->get('CargoConnect.api_url', false);
 
-        //return $this->createOrderResult[144] = $this->buildResultArray(false, "Error:0001 - Preflight failed", false, null);
+        $this->_post("/logmessage", ['message' => 'Hello world']);
+
+        // return $this->createOrderResult[144] = $this->buildResultArray(false, "Error:0001 - Preflight failed", false, null);
 
 		$orderIds = $this->getOrderIds($request, $orderIds);
 		//$orderIds = $this->getOpenOrderIds($orderIds);
@@ -186,7 +188,6 @@ class ShippingController extends Controller
             #$shipping_information2 = $this->orderShippingProfilesRepository->getCombinations($orderId, true);
             
             $shipping_information = $this->getParcelServicePreset($iw_shipping_profile_id);
-
 
             $shipping_packages = $order->shippingPackages;
 
@@ -287,7 +288,6 @@ class ShippingController extends Controller
             ];
 
             $res = $this->_post("/submit-order", $params);
-            #$this->createOrderResult[$orderId] = $this->buildResultArray(true, "Label erstellt", false, null);
 
             $response = [
                 'labelUrl' => 'https://backpack.ironwhale.com/label.pdf',
@@ -296,10 +296,13 @@ class ShippingController extends Controller
                 'status' => 'shipment sucessfully registered'
             ];
 
+            //marker
+
             $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], 205);
 
             // adds result
             $this->createOrderResult[$orderId] = $this->buildResultArray(true, $this->getStatusMessage($response), false, $shipmentItems);
+            //$this->createOrderResult[$orderId] = $this->buildResultArray(true, "Label erstellt", false, null);
 
             // saves shipping information
             $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
