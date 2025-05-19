@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 27;
+    private $plugin_revision = 28;
 
     /**
      * ShipmentController constructor.
@@ -191,9 +191,6 @@ class ShippingController extends Controller
 
                 try
                 {
-                    // check wether we are in test or productive mode, use different login or connection data
-                    $mode = $this->config->get('ShippingTutorial.mode', '0');
-
                     // shipping service providers API should be used here
                     $response = [
                         'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
@@ -213,8 +210,12 @@ class ShippingController extends Controller
                         $shipmentItems
                     );
 
+                    $this->debugger("createOrderResult");
+
                     // saves shipping information
                     $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
+
+                    $this->debugger("saveShippingInformation");
                 }
                 catch(\SoapFault $soapFault)
                 {
@@ -593,7 +594,6 @@ class ShippingController extends Controller
     private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber)
     {
         $shipmentItems = array();
-
         $storageObject = $this->saveLabelToS3(
             $labelUrl,
             $shipmentNumber . '.pdf');
@@ -607,7 +607,6 @@ class ShippingController extends Controller
             $this->buildPackageInfo(
                 $shipmentNumber,
                 $storageObject->key));
-
         return $shipmentItems;
     }
 
