@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 28;
+    private $plugin_revision = 29;
 
     /**
      * ShipmentController constructor.
@@ -180,6 +180,8 @@ class ShippingController extends Controller
             // iterating through packages
             foreach($packages as $package)
             {
+                $this->debugger("in packages loop");
+
                 // weight
                 $weight = $package->weight;
 
