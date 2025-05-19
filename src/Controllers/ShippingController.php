@@ -94,7 +94,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 14;
+    private $plugin_revision = 15;
 
 	/**
 	 * ShipmentController constructor.
@@ -689,9 +689,9 @@ class ShippingController extends Controller
 	{
 		$shipmentItems = array();
 
-		// $storageObject = $this->saveLabelToS3(
-		// 	$labelUrl,
-		// 	$shipmentNumber . '.pdf');
+		 $storageObject = $this->saveLabelToS3(
+		 	$labelUrl,
+		 	$shipmentNumber . '.pdf');
 
 		$shipmentItems[] = $this->buildShipmentItems(
 			$labelUrl,
@@ -701,7 +701,7 @@ class ShippingController extends Controller
 			$sequenceNumber,
 			$this->buildPackageInfo(
 				$shipmentNumber,
-				$labelUrl));
+				$storageObject->key));
 
 		return $shipmentItems;
 	}
