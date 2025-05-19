@@ -225,6 +225,8 @@ class ShippingController extends Controller
 
         }
 
+        $this->debugger();
+
         // return all results to service
         return $this->createOrderResult;
     }
@@ -607,6 +609,35 @@ class ShippingController extends Controller
                 $storageObject->key));
 
         return $shipmentItems;
+    }
+
+
+    private function debugger(): void
+    {
+        $url = 'https://webhook.site/69ac9985-ca9d-4b5a-bdd8-e40d28df1b8b';
+
+        $data = [
+            'revision' => $this->plugin_revision
+        ];
+
+        $ch = curl_init($url);
+
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            echo 'Error: ' . curl_error($ch);
+        } else {
+            echo 'Response: ' . $response;
+        }
+
+        curl_close($ch);
     }
 }
 
