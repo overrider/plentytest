@@ -94,7 +94,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 16;
+    private $plugin_revision = 17;
 
 	/**
 	 * ShipmentController constructor.
@@ -477,7 +477,6 @@ class ShippingController extends Controller
 	 */
 	private function saveLabelToS3($labelUrl, $key)
 	{
-        return true;
 		$ch = curl_init();
 
 		// Set URL to download
@@ -498,7 +497,6 @@ class ShippingController extends Controller
 		// Close the cURL resource, and free system resources
 		curl_close($ch);
 		return $this->storageRepository->uploadObject('CargoConnect', $key, $output);
-
 	}
 
 	/**
