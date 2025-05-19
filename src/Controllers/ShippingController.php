@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 31;
+    private $plugin_revision = 32;
 
     /**
      * ShipmentController constructor.
@@ -151,9 +151,12 @@ class ShippingController extends Controller
         $shipmentDate = date('Y-m-d');
 
         $this->debugger("getOrderIds and getOpenOrderIds");
+        $this->debugger(implode(",", $orderIds));
+
 
         foreach($orderIds as $orderId)
         {
+            $this->debugger("in order loop");
             $order = $this->orderRepository->findOrderById($orderId);
 
             // gathering required data for registering the shipment
@@ -207,6 +210,8 @@ class ShippingController extends Controller
 
                     // handles the response
                     $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package->id);
+
+                    $this->debugger("handleAfterRegisterShipment");
 
                     // adds result
                     $this->createOrderResult[$orderId] = $this->buildResultArray(
