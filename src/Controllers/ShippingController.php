@@ -94,7 +94,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 13;
+    private $plugin_revision = 14;
 
 	/**
 	 * ShipmentController constructor.
@@ -214,6 +214,7 @@ class ShippingController extends Controller
             }
 
             $package_infos = [];
+            $package_id = null;
             foreach($packages as $package){
                 $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
                 $length = $packageType->length;
@@ -225,6 +226,7 @@ class ShippingController extends Controller
                     'package' => $package,
                     'package_type' => $packageType,
                 ];
+                $package_id = $package->id;
             }
 
             // iterating through packages
@@ -292,13 +294,14 @@ class ShippingController extends Controller
             $response = [
                 'labelUrl' => 'https://backpack.ironwhale.com/label.pdf',
                 'shipmentNumber' => '12345678912341',
-                'sequenceNumber' => 205,
+                'sequenceNumber' => $package_id,
                 'status' => 'shipment sucessfully registered'
             ];
 
             //marker
 
-            $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], 205);
+            $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package_id);
+            $this->_post("/logmessage", ['shipmentItems' => $shipmentItems]);
 
             // adds result
             $this->createOrderResult[$orderId] = $this->buildResultArray(true, $this->getStatusMessage($response), false, $shipmentItems);
