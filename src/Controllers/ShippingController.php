@@ -291,6 +291,7 @@ class ShippingController extends Controller
 
             $res = $this->_post("/submit-order", $params);
 
+            // dies muss von $res kommen
             $response = [
                 'labelUrl' => 'https://backpack.ironwhale.com/label.pdf',
                 'shipmentNumber' => '12345678912341',
