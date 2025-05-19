@@ -292,11 +292,11 @@ class ShippingController extends Controller
             $response = [
                 'labelUrl' => 'https://backpack.ironwhale.com/label.pdf',
                 'shipmentNumber' => '12345678912341',
-                'sequenceNumber' => 205,
+                'sequenceNumber' => 292,
                 'status' => 'shipment sucessfully registered'
             ];
 
-            $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], 205);
+            $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], 292);
 
             // adds result
             $this->createOrderResult[$orderId] = $this->buildResultArray(true, $this->getStatusMessage($response), false, $shipmentItems);
