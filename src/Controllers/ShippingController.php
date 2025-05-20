@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 38;
+    private $plugin_revision = 39;
 
     /**
      * ShipmentController constructor.
@@ -195,8 +195,8 @@ class ShippingController extends Controller
                     // shipping service providers API should be used here
                     $response = [
                         'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
-                        'shipmentNumber' => $this->guidv4(),
-                        'sequenceNumber' => 1,
+                        'shipmentNumber' => '12345678912341',
+                        'sequenceNumber' => $package->id,
                         'status' => 'shipment successfully registered'
                     ];
 
@@ -655,20 +655,6 @@ class ShippingController extends Controller
         }
 
         curl_close($ch);
-    }
-
-    function guidv4($data = null) {
-        // Generate 16 bytes (128 bits) of random data or use the data passed into the function.
-        $data = $data ?? random_bytes(16);
-        assert(strlen($data) == 16);
-
-        // Set version to 0100
-        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
-        // Set bits 6-7 to 10
-        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
-
-        // Output the 36 character UUID.
-        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 }
 
