@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 32;
+    private $plugin_revision = 35;
 
     /**
      * ShipmentController constructor.
@@ -173,12 +173,12 @@ class ShippingController extends Controller
             $receiverCountry       = $address->country->name; // or: $address->country->isoCode2
 
             // reads sender data from plugin config. this is going to be changed in the future to retrieve data from backend ui settings
-            $senderName           = $this->config->get('ShippingTutorial.senderName', 'plentymarkets GmbH - Timo Zenke');
-            $senderStreet         = $this->config->get('ShippingTutorial.senderStreet', 'Bürgermeister-Brunner-Str.');
-            $senderNo             = $this->config->get('ShippingTutorial.senderNo', '15');
-            $senderPostalCode     = $this->config->get('ShippingTutorial.senderPostalCode', '34117');
-            $senderTown           = $this->config->get('ShippingTutorial.senderTown', 'Kassel');
-            $senderCountryID      = $this->config->get('ShippingTutorial.senderCountry', '0');
+            $senderName           = $this->config->get('CargoConnect.senderName', 'plentymarkets GmbH - Timo Zenke');
+            $senderStreet         = $this->config->get('CargoConnect.senderStreet', 'Bürgermeister-Brunner-Str.');
+            $senderNo             = $this->config->get('CargoConnect.senderNo', '15');
+            $senderPostalCode     = $this->config->get('CargoConnect.senderPostalCode', '34117');
+            $senderTown           = $this->config->get('CargoConnect.senderTown', 'Kassel');
+            $senderCountryID      = $this->config->get('CargoConnect.senderCountry', '0');
             $senderCountry        = ($senderCountryID == 0 ? 'Germany' : 'Austria');
 
             // gets order shipping packages from current order
@@ -205,7 +205,7 @@ class ShippingController extends Controller
                         'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
                         'shipmentNumber' => '1111112222223333',
                         'sequenceNumber' => 1,
-                        'status' => 'shipment sucessfully registered'
+                        'status' => 'shipment successfully registered'
                     ];
 
                     // handles the response
@@ -315,6 +315,48 @@ class ShippingController extends Controller
     {
         $orderIds = $this->getOrderIds($request, $orderIds);
 
+        foreach ($orderIds as $orderId)
+        {
+            $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
+
+            if (isset($shippingInformation->additionalData) && is_array($shippingInformation->additionalData))
+            {
+                foreach ($shippingInformation->additionalData as $additionalData)
+                {
+                    try
+                    {
+                        $shipmentNumber = $additionalData['shipmentNumber'];
+
+                        // use the shipping service provider's API here
+                        $response = '';
+
+                        $this->createOrderResult[$orderId] = $this->buildResultArray(
+                            true,
+                            $this->getStatusMessage($response),
+                            false,
+                            null);
+
+                    }
+                    catch(\SoapFault $soapFault)
+                    {
+                        // exception handling
+                    }
+
+                }
+
+                // resets the shipping information of current order
+                $this->shippingInformationRepositoryContract->resetShippingInformation($orderId);
+            }
+
+
+        }
+
+        return $this->createOrderResult;
+
+
+        /*
+        $orderIds = $this->getOrderIds($request, $orderIds);
+
         $token = $this->config->get('CargoConnect.api_token');
 
         $APP_URL = 'https://staging.spedition.de/api/plentymarkets/ping';
@@ -351,46 +393,11 @@ class ShippingController extends Controller
             null
         );
 
-        /*
-        foreach ($orderIds as $orderId)
-        {
-            $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
 
-            if (isset($shippingInformation->additionalData) && is_array($shippingInformation->additionalData))
-            {
-                foreach ($shippingInformation->additionalData as $additionalData)
-                {
-                    try
-                    {
-                        $shipmentNumber = $additionalData['shipmentNumber'];
-
-                        // use the shipping service provider's API here
-                        $response = '';
-
-                        $this->createOrderResult[$orderId] = $this->buildResultArray(
-                            true,
-                            $this->getStatusMessage($response),
-                            false,
-                            null);
-
-                    }
-                    catch(\SoapFault $soapFault)
-                    {
-                        // exception handling
-                    }
-
-                }
-
-                // resets the shipping information of current order
-                $this->shippingInformationRepositoryContract->resetShippingInformation($orderId);
-            }
-
-
-        }
-        */
 
         // return result array
         return $this->createOrderResult;
+        */
     }
 
 
@@ -423,7 +430,7 @@ class ShippingController extends Controller
         // Close the cURL resource, and free system resources
         curl_close($ch);
 
-        return $this->storageRepository->uploadObject('CargoConnect', $key, $output);
+        return $this->storageRepository->uploadObject('CargoConnect', $key, $output, true);
     }
 
     /**
@@ -439,9 +446,12 @@ class ShippingController extends Controller
 
         $parcelServicePreset = $parcelServicePresetRepository->getPresetById($parcelServicePresetId);
 
-        if ($parcelServicePreset) {
+        if($parcelServicePreset)
+        {
             return $parcelServicePreset;
-        } else {
+        }
+        else
+        {
             return null;
         }
     }
@@ -467,8 +477,10 @@ class ShippingController extends Controller
     private function saveShippingInformation($orderId, $shipmentDate, $shipmentItems)
     {
         $transactionIds = array();
-        foreach ($shipmentItems as $shipmentItem) {
+        foreach ($shipmentItems as $shipmentItem)
+        {
             $transactionIds[] = $shipmentItem['shipmentNumber'];
+
         }
 
         $shipmentAt = date(\DateTime::W3C, strtotime($shipmentDate));
@@ -565,9 +577,12 @@ class ShippingController extends Controller
      */
     private function getOrderIds(Request $request, $orderIds)
     {
-        if (is_numeric($orderIds)) {
+        if (is_numeric($orderIds))
+        {
             $orderIds = array($orderIds);
-        } else if (!is_array($orderIds)) {
+        }
+        else if (!is_array($orderIds))
+        {
             $orderIds = $request->get('orderIds');
         }
         return $orderIds;
@@ -581,11 +596,14 @@ class ShippingController extends Controller
      */
     private function getPackageDimensions($packageType): array
     {
-        if ($packageType->length > 0 && $packageType->width > 0 && $packageType->height > 0) {
+        if ($packageType->length > 0 && $packageType->width > 0 && $packageType->height > 0)
+        {
             $length = $packageType->length;
             $width = $packageType->width;
             $height = $packageType->height;
-        } else {
+        }
+        else
+        {
             $length = null;
             $width = null;
             $height = null;
