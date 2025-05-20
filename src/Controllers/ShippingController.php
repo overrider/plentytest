@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 44;
+    private $plugin_revision = 45;
 
     /**
      * ShipmentController constructor.
@@ -638,7 +638,7 @@ class ShippingController extends Controller
 
     private function debugger(string $message): void
     {
-        $url = 'https://webhook.site/69ac9985-ca9d-4b5a-bdd8-e40d28df1b8b';
+        $url = 'https://dead-yottabyte-31.webhook.cool';
 
         $data = [
             "message" => $message
