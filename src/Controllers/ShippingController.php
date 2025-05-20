@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 41;
+    private $plugin_revision = 43;
 
     /**
      * ShipmentController constructor.
@@ -222,6 +222,8 @@ class ShippingController extends Controller
             }
 
         }
+
+        $this->debugger(json_encode($this->createOrderResult));
 
         // return all results to service
         return $this->createOrderResult;
@@ -629,7 +631,7 @@ class ShippingController extends Controller
         );
 
         $this->debugger("RETURNING SHIPMENT ITEMS");
-        $this->debugger(implode(', ', $shipmentItems));
+        $this->debugger(json_encode($shipmentItems));
 
         return $shipmentItems;
     }
