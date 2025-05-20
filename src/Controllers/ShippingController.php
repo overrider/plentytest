@@ -87,7 +87,7 @@ class ShippingController extends Controller
     private $shippingPackageTypeRepositoryContract;
 
     /**
-     * @var  array
+     * @var array
      */
     private $createOrderResult = [];
 
@@ -104,10 +104,12 @@ class ShippingController extends Controller
      * @param Request $request
      * @param OrderRepositoryContract $orderRepository
      * @param AddressRepositoryContract $addressRepositoryContract
+     * @param \Plenty\Modules\Order\Address\Contracts\OrderAddressRepositoryContract $orderAddressRepositoryContract
      * @param OrderShippingPackageRepositoryContract $orderShippingPackage
      * @param StorageRepositoryContract $storageRepository
      * @param ShippingInformationRepositoryContract $shippingInformationRepositoryContract
      * @param ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
+     * @param \Plenty\Modules\Order\ShippingProfiles\Contracts\OrderShippingProfilesRepositoryContract $orderShippingProfilesRepositoryContract
      * @param ConfigRepository $config
      */
     public function __construct(Request                                 $request,
@@ -119,7 +121,8 @@ class ShippingController extends Controller
                                 ShippingInformationRepositoryContract   $shippingInformationRepositoryContract,
                                 ShippingPackageTypeRepositoryContract   $shippingPackageTypeRepositoryContract,
                                 OrderShippingProfilesRepositoryContract $orderShippingProfilesRepositoryContract,
-                                ConfigRepository                        $config)
+                                ConfigRepository                        $config
+    )
     {
         $this->request = $request;
         $this->orderRepository = $orderRepository;
@@ -144,7 +147,6 @@ class ShippingController extends Controller
      */
     public function registerShipments(Request $request, $orderIds): array
     {
-        $this->debugger((string) $this->plugin_revision);
         $orderIds = $this->getOrderIds($request, $orderIds);
         $orderIds = $this->getOpenOrderIds($orderIds);
         $shipmentDate = date('Y-m-d');
@@ -152,8 +154,6 @@ class ShippingController extends Controller
         foreach($orderIds as $orderId)
         {
             $order = $this->orderRepository->findOrderById($orderId);
-
-            // gathering required data for registering the shipment
 
             /** @var Address $address */
             $address = $order->deliveryAddress;
@@ -164,7 +164,8 @@ class ShippingController extends Controller
             $receiverNo            = $address->houseNumber;
             $receiverPostalCode    = $address->postalCode;
             $receiverTown          = $address->town;
-            $receiverCountry       = $address->country->name; // or: $address->country->isoCode2
+            $receiverCountry       = $address->country->name;
+            $receiverCompany       = $address->companyName;
 
             // reads sender data from plugin config. this is going to be changed in the future to retrieve data from backend ui settings
             $senderName           = $this->config->get('CargoConnect.senderName', 'plentymarkets GmbH - Timo Zenke');
@@ -174,23 +175,34 @@ class ShippingController extends Controller
             $senderTown           = $this->config->get('CargoConnect.senderTown', 'Kassel');
             $senderCountryID      = $this->config->get('CargoConnect.senderCountry', '0');
             $senderCountry        = ($senderCountryID == 0 ? 'Germany' : 'Austria');
+            $shippingProfileId    = $order->shippingProfileId;
 
             // gets order shipping packages from current order
             $packages = $this->orderShippingPackage->listOrderShippingPackages($order->id);
 
+            $cargoOrderPackages = [];
+
             // iterating through packages
             foreach($packages as $package)
             {
-                // weight
-                $weight = $package->weight;
-
                 // determine packageType
                 $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
+
+                // weight
+                $weight = $package->weight;
 
                 // package dimensions
                 list($length, $width, $height) = $this->getPackageDimensions($packageType);
 
-                try
+                $cargoOrderPackages[] = [
+                    'length' => $length,
+                    'width' => $width,
+                    'height' => $height,
+                    'weight' => $weight,
+                    'packageType' => $packageType->name
+                ];
+
+                /*try
                 {
                     // shipping service providers API should be used here
                     $response = [
@@ -216,14 +228,14 @@ class ShippingController extends Controller
                 }
                 catch(\SoapFault $soapFault)
                 {
-
-                }
+                    $this->debugger($soapFault->getMessage());
+                }*/
 
             }
 
-        }
 
-        $this->debugger(json_encode($this->createOrderResult));
+            $this->debugger(json_encode($cargoOrderPackages));
+        }
 
         // return all results to service
         return $this->createOrderResult;
@@ -274,6 +286,7 @@ class ShippingController extends Controller
         }
 
         $headers = [];
+
         $headerLines = explode("\r\n", $header);
         foreach ($headerLines as $line) {
             if (strpos($line, ':') !== false) {
@@ -282,8 +295,7 @@ class ShippingController extends Controller
             }
         }
 
-        $data = json_decode($body, TRUE);
-        return $data;
+        return json_decode($body, TRUE);
     }
 
     public function _get()
@@ -294,10 +306,10 @@ class ShippingController extends Controller
      * Cancels registered shipment(s)
      *
      * @param Request $request
-     * @param array $orderIds
+     * @param array<int> $orderIds
      * @return array
      */
-    public function deleteShipments(Request $request, $orderIds)
+    public function deleteShipments(Request $request, array $orderIds): array
     {
         $orderIds = $this->getOrderIds($request, $orderIds);
 
@@ -394,7 +406,7 @@ class ShippingController extends Controller
      * @param $key
      * @return StorageObject
      */
-    private function saveLabelToS3($labelUrl, $key)
+    private function saveLabelToS3($labelUrl, $key): StorageObject
     {
         $ch = curl_init();
 
@@ -427,7 +439,7 @@ class ShippingController extends Controller
      * @param int $parcelServicePresetId
      * @return ParcelServicePreset
      */
-    private function getParcelServicePreset($parcelServicePresetId)
+    private function getParcelServicePreset(int $parcelServicePresetId): ?ParcelServicePreset
     {
         /** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
         $parcelServicePresetRepository = pluginApp(ParcelServicePresetRepositoryContract::class);
@@ -438,10 +450,9 @@ class ShippingController extends Controller
         {
             return $parcelServicePreset;
         }
-        else
-        {
-            return null;
-        }
+
+        return null;
+
     }
 
     /**
@@ -450,7 +461,7 @@ class ShippingController extends Controller
      * @param array $response
      * @return string
      */
-    private function getStatusMessage($response)
+    private function getStatusMessage(array $response): string
     {
         return 'Code: ' . $response['status']; // should contain error code and descriptive part
     }
@@ -464,7 +475,8 @@ class ShippingController extends Controller
      */
     private function saveShippingInformation($orderId, $shipmentDate, $shipmentItems)
     {
-        $transactionIds = array();
+        $transactionIds = [];
+
         foreach ($shipmentItems as $shipmentItem)
         {
             $transactionIds[] = $shipmentItem['shipmentNumber'];
@@ -491,14 +503,16 @@ class ShippingController extends Controller
     /**
      * Returns all order ids with shipping status 'open'
      *
-     * @param array $orderIds
+     * @param array<int> $orderIds
      * @return array
      */
-    private function getOpenOrderIds($orderIds)
+    private function getOpenOrderIds(array $orderIds): array
     {
-        $openOrderIds = array();
+        $openOrderIds = [];
         foreach ($orderIds as $orderId) {
+
             $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
+
             if ($shippingInformation->shippingStatus == null || $shippingInformation->shippingStatus == 'open') {
                 $openOrderIds[] = $orderId;
             }
@@ -516,7 +530,7 @@ class ShippingController extends Controller
      * @param array $shipmentItems
      * @return array
      */
-    private function buildResultArray($success = false, $statusMessage = '', $newShippingPackage = false, $shipmentItems = [])
+    private function buildResultArray(bool $success = false, string $statusMessage = '', bool $newShippingPackage = false, array $shipmentItems = []): array
     {
         return [
             'success' => $success,
@@ -533,7 +547,7 @@ class ShippingController extends Controller
      * @param string $shipmentNumber
      * @return array
      */
-    private function buildShipmentItems($labelUrl, $shipmentNumber)
+    private function buildShipmentItems(string $labelUrl, string $shipmentNumber): array
     {
         return [
             'labelUrl' => $labelUrl,
@@ -548,7 +562,7 @@ class ShippingController extends Controller
      * @param string $labelUrl
      * @return array
      */
-    private function buildPackageInfo($packageNumber, $labelUrl)
+    private function buildPackageInfo(string $packageNumber, string $labelUrl): array
     {
         return [
             'packageNumber' => $packageNumber,
@@ -563,7 +577,7 @@ class ShippingController extends Controller
      * @param $orderIds
      * @return array
      */
-    private function getOrderIds(Request $request, $orderIds)
+    private function getOrderIds(Request $request, $orderIds): array
     {
         if (is_numeric($orderIds))
         {
@@ -608,7 +622,7 @@ class ShippingController extends Controller
      * @param string $sequenceNumber
      * @return array
      */
-    private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber)
+    private function handleAfterRegisterShipment(string $labelUrl, string $shipmentNumber, string $sequenceNumber)
     {
         $shipmentItems = array();
 
@@ -629,8 +643,6 @@ class ShippingController extends Controller
                 $storageObject->key
             )
         );
-
-        $this->debugger(json_encode($shipmentItems));
 
         return $shipmentItems;
     }

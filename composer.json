@@ -1,0 +1,16 @@
+{
+    "name": "cargo/connect",
+    "description": "PlentyOne Shipping Plugin",
+    "authors": [
+        {
+            "name": "Piotr",
+            "email": "p.janczewski@spedition.de"
+        }
+    ],
+    "require": {
+        "plentymarkets/plugin-interface": "dev-beta7",
+      "ext-curl": "*",
+      "ext-json": "*",
+      "ext-soap": "*"
+    }
+}
