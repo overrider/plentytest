@@ -144,19 +144,12 @@ class ShippingController extends Controller
      */
     public function registerShipments(Request $request, $orderIds): array
     {
-        $this->debugger("registerShipments");
-
         $orderIds = $this->getOrderIds($request, $orderIds);
         $orderIds = $this->getOpenOrderIds($orderIds);
         $shipmentDate = date('Y-m-d');
 
-        $this->debugger("getOrderIds and getOpenOrderIds");
-        $this->debugger(implode(",", $orderIds));
-
-
         foreach($orderIds as $orderId)
         {
-            $this->debugger("in order loop");
             $order = $this->orderRepository->findOrderById($orderId);
 
             // gathering required data for registering the shipment
@@ -187,8 +180,6 @@ class ShippingController extends Controller
             // iterating through packages
             foreach($packages as $package)
             {
-                $this->debugger("in packages loop");
-
                 // weight
                 $weight = $package->weight;
 
@@ -211,8 +202,6 @@ class ShippingController extends Controller
                     // handles the response
                     $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package->id);
 
-                    $this->debugger("handleAfterRegisterShipment");
-
                     // adds result
                     $this->createOrderResult[$orderId] = $this->buildResultArray(
                         true,
@@ -221,23 +210,17 @@ class ShippingController extends Controller
                         $shipmentItems
                     );
 
-                    $this->debugger("createOrderResult");
-
                     // saves shipping information
                     $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
-
-                    $this->debugger("saveShippingInformation");
                 }
                 catch(\SoapFault $soapFault)
                 {
-                    $this->debugger($soapFault->getMessage());
+
                 }
 
             }
 
         }
-
-        $this->debugger((string)$this->plugin_revision);
 
         // return all results to service
         return $this->createOrderResult;
