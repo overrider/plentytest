@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 35;
+    private $plugin_revision = 36;
 
     /**
      * ShipmentController constructor.
@@ -412,6 +412,10 @@ class ShippingController extends Controller
 
         // Close the cURL resource, and free system resources
         curl_close($ch);
+
+
+        $this->debugger("OUTPUT FROM S3 FUNCTION: ");
+        $this->debugger($output);
 
         return $this->storageRepository->uploadObject('CargoConnect', $key, $output, true);
     }
