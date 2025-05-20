@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 43;
+    private $plugin_revision = 44;
 
     /**
      * ShipmentController constructor.
@@ -195,7 +195,7 @@ class ShippingController extends Controller
                     // shipping service providers API should be used here
                     $response = [
                         'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
-                        'shipmentNumber' => '12345678912341',
+                        'shipmentNumber' => (string) rand(100000, 999999),
                         'sequenceNumber' => $package->id,
                         'status' => 'shipment successfully registered'
                     ];
@@ -418,7 +418,7 @@ class ShippingController extends Controller
 
         $this->debugger($output);
 
-        return $this->storageRepository->uploadObject('CargoConnect', $key, $output, true);
+        return $this->storageRepository->uploadObject('CargoConnect', $key, $output);
     }
 
     /**
@@ -612,10 +612,10 @@ class ShippingController extends Controller
     {
         $shipmentItems = array();
 
-/*        $storageObject = $this->saveLabelToS3(
+        $storageObject = $this->saveLabelToS3(
             $labelUrl,
             $shipmentNumber . '.pdf'
-        );*/
+        );
 
         $shipmentItems[] = $this->buildShipmentItems(
             $labelUrl,
@@ -626,11 +626,10 @@ class ShippingController extends Controller
             $sequenceNumber,
             $this->buildPackageInfo(
                 $shipmentNumber,
-                $labelUrl
+                $storageObject->key
             )
         );
 
-        $this->debugger("RETURNING SHIPMENT ITEMS");
         $this->debugger(json_encode($shipmentItems));
 
         return $shipmentItems;
