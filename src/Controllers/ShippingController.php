@@ -166,7 +166,7 @@ class ShippingController extends Controller
                     $response = [
                         'labelUrl' => 'https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg',
                         'shipmentNumber' => '1111112222223333',
-                        'sequenceNumber' => 1,
+                        'sequenceNumber' => "1",
                         'status' => 'shipment sucessfully registered'
                     ];
 
