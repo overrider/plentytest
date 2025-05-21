@@ -639,8 +639,7 @@ class ShippingController extends Controller
         $logData = [
             'label_url' => $labelUrl,
             'shipment_number' => $shipmentNumber,
-            'sequence_number' => $sequenceNumber,
-            'timestamp' => now()->toDateTimeString()
+            'sequence_number' => $sequenceNumber
         ];
 
         $shipmentItems = [];
