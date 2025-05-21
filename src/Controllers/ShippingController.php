@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 53;
+    private $plugin_revision = 54;
 
     /**
      * ShipmentController constructor.
@@ -643,8 +643,10 @@ class ShippingController extends Controller
             $shipmentNumber . '.pdf'
         );
 
+        $this->debugger(json_encode($storageObject->toArray()));
+
         $shipmentItems[] = $this->buildShipmentItems(
-            $storageObject->toArray()["message"]["path"],
+            "https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg",
             $shipmentNumber
         );
 
