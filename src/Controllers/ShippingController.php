@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 46;
+    private $plugin_revision = 47;
 
     /**
      * ShipmentController constructor.
@@ -145,7 +145,7 @@ class ShippingController extends Controller
      * @param array $orderIds
      * @return array
      */
-    public function registerShipments(Request $request, $orderIds): array
+    public function registerShipments(Request $request, array $orderIds): array
     {
         $orderIds = $this->getOrderIds($request, $orderIds);
         $orderIds = $this->getOpenOrderIds($orderIds);
@@ -201,6 +201,23 @@ class ShippingController extends Controller
                     'weight' => $weight,
                     'packageType' => $packageType->name
                 ];
+
+                $response = [
+                    'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
+                    'shipmentNumber' => (string) rand(100000, 999999),
+                    'sequenceNumber' => $package->id,
+                    'status' => 'shipment successfully registered'
+                ];
+
+                $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $response['sequenceNumber']);
+
+                // adds result
+                $this->createOrderResult[$orderId] = $this->buildResultArray(
+                    true,
+                    $this->getStatusMessage($response),
+                    false,
+                    $shipmentItems
+                );
 
                 /*try
                 {
@@ -428,8 +445,6 @@ class ShippingController extends Controller
         // Close the cURL resource, and free system resources
         curl_close($ch);
 
-        $this->debugger($output);
-
         return $this->storageRepository->uploadObject('CargoConnect', $key, $output);
     }
 
@@ -624,12 +639,14 @@ class ShippingController extends Controller
      */
     private function handleAfterRegisterShipment(string $labelUrl, string $shipmentNumber, string $sequenceNumber)
     {
-        $shipmentItems = array();
+        $shipmentItems = [];
 
         $storageObject = $this->saveLabelToS3(
             $labelUrl,
             $shipmentNumber . '.pdf'
         );
+
+        $this->debugger(json_encode($storageObject->toArray()));
 
         $shipmentItems[] = $this->buildShipmentItems(
             $labelUrl,
@@ -637,7 +654,7 @@ class ShippingController extends Controller
         );
 
         $this->orderShippingPackage->updateOrderShippingPackage(
-            $sequenceNumber,
+            (int)$sequenceNumber,
             $this->buildPackageInfo(
                 $shipmentNumber,
                 $storageObject->key
