@@ -5,8 +5,8 @@
       "namespace"             : "CargoConnect",
       "author"                : "David S.",
       "type"                  : "shipping",
-      "isClosedSource"        : "False",
-      "version"               : "0.5",
+      "isClosedSource"        : true,
+      "version"               : "0.6",
       "license"               : "AGPL-3.0",
       "pluginIcon"            : "icon_plugin_xs.png",
       "price"                 : 0.00,
@@ -16,7 +16,7 @@
       "email"                 : "d.schulz@spedition.de",
       "phone"                 : "+49 176 32154637",
       "platform": {
-            "php": ">=8.3"
+            "php": ">=7.3 <8.1"
       },
       "serviceProvider": "GoExpress\\Providers\\GoExpressServiceProvider",
       "runOnBuild": [
