@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 48;
+    private $plugin_revision = 49;
 
     /**
      * ShipmentController constructor.
@@ -249,9 +249,6 @@ class ShippingController extends Controller
                 }*/
 
             }
-
-
-            $this->debugger(json_encode($cargoOrderPackages));
         }
 
         // return all results to service
@@ -646,12 +643,12 @@ class ShippingController extends Controller
             $shipmentNumber . '.pdf'
         );
 
-        $this->debugger(json_encode($storageObject->toArray()));
-
         $shipmentItems[] = $this->buildShipmentItems(
             $labelUrl,
             $shipmentNumber
         );
+
+        $this->debugger(json_encode($storageObject->toArray()));
 
         $this->orderShippingPackage->updateOrderShippingPackage(
             (int)$sequenceNumber,
