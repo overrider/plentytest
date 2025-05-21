@@ -121,7 +121,7 @@ class ShippingController extends Controller
                 $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
 
                 $this->getLogger(identifier: __METHOD__)
-                    ->error(code: 'package data', additionalInfo: ['package' => $packageType, 'packageId' => $package->packageId]);
+                    ->info(code: 'package data', additionalInfo: ['package' => $packageType, 'packageId' => $package->packageId]);
 
                 // package dimensions
                 list($length, $width, $height) = $this->getPackageDimensions($packageType);
@@ -140,7 +140,7 @@ class ShippingController extends Controller
                     ];
 
                     // handles the response
-                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], (string) $package->id);
+                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $response['sequenceNumber']);
 
                     // adds result
                     $this->createOrderResult[$orderId] = $this->buildResultArray(
