@@ -43,10 +43,10 @@ class ShippingController extends Controller
      * @param \Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract $shippingInformationRepositoryContract
      */
     public function __construct(
-        public readonly OrderRepositoryContract $orderRepository,
-        public readonly OrderShippingPackageRepositoryContract $orderShippingPackage,
-        public readonly StorageRepositoryContract $storageRepository,
-        public readonly ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
+        public OrderRepositoryContract $orderRepository,
+        public OrderShippingPackageRepositoryContract $orderShippingPackage,
+        public StorageRepositoryContract $storageRepository,
+        public ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
     ) {
        parent::__construct();
     }
