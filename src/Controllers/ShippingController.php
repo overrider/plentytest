@@ -119,7 +119,7 @@ class ShippingController extends Controller
      * @internal see GoExpressServiceProvider
      * @return array
      */
-    public function getLabels(Request $request, array $orderIds): array
+    public function getLabels(Request $request, $orderIds): array
     {
         $orderIds = $this->getOrderIds(
             request: $request,
