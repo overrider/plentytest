@@ -132,7 +132,7 @@ class ShippingController extends Controller
                     $response = [
                         'labelUrl' => 'https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg',
                         'shipmentNumber' => (string)rand(min: 1000000, max: 9999999),
-                        'sequenceNumber' => 1,
+                        'sequenceNumber' => "1",
                         'status' => 'shipment successfully registered'
                     ];
 
@@ -276,16 +276,7 @@ class ShippingController extends Controller
         /** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
         $parcelServicePresetRepository = pluginApp(ParcelServicePresetRepositoryContract::class);
 
-        $parcelServicePreset = $parcelServicePresetRepository->getPresetById($parcelServicePresetId);
-
-        if($parcelServicePreset)
-        {
-            return $parcelServicePreset;
-        }
-        else
-        {
-            return null;
-        }
+        return $parcelServicePresetRepository->getPresetById($parcelServicePresetId);
     }
 
     /**
