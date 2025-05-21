@@ -6,7 +6,6 @@ namespace CargoConnect\Providers;
 
 use CargoConnect\Helpers\ShippingServiceProvider;
 use Plenty\Log\Services\ReferenceContainer;
-use Plenty\Log\Exceptions\ReferenceTypeException;
 use Plenty\Modules\Order\Shipping\ServiceProvider\Services\ShippingServiceProviderService;
 use Plenty\Plugin\ServiceProvider;
 
@@ -26,11 +25,9 @@ final class CargoConnectServiceProvider extends ServiceProvider
      */
     public function boot(ReferenceContainer $referenceContainer, ShippingServiceProviderService $shippingServiceProviderService): void
     {
-        try {
-            $referenceContainer->add(referenceTypes: [
-                "CargoConnect" => "CargoConnect"
-            ]);
-        } catch (ReferenceTypeException $exception) {}
+        $referenceContainer->add(referenceTypes: [
+            "CargoConnect" => "CargoConnect"
+        ]);
 
         $shippingServiceProviderService->registerShippingProvider(
             shippingServiceProviderCode: ShippingServiceProvider::PLUGIN_NAME,
