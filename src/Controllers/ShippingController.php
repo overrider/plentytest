@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 50;
+    private $plugin_revision = 52;
 
     /**
      * ShipmentController constructor.
@@ -147,8 +147,6 @@ class ShippingController extends Controller
      */
     public function registerShipments(Request $request, array $orderIds): array
     {
-        $this->debugger((string)$this->plugin_revision);
-
         $orderIds = $this->getOrderIds($request, $orderIds);
         $orderIds = $this->getOpenOrderIds($orderIds);
         $shipmentDate = date('Y-m-d');
@@ -638,6 +636,13 @@ class ShippingController extends Controller
      */
     private function handleAfterRegisterShipment(string $labelUrl, string $shipmentNumber, string $sequenceNumber)
     {
+        $logData = [
+            'label_url' => $labelUrl,
+            'shipment_number' => $shipmentNumber,
+            'sequence_number' => $sequenceNumber,
+            'timestamp' => now()->toDateTimeString()
+        ];
+
         $shipmentItems = [];
 
         $storageObject = $this->saveLabelToS3(
@@ -645,20 +650,29 @@ class ShippingController extends Controller
             $shipmentNumber . '.pdf'
         );
 
+        $logData['s3_storage_key'] = $storageObject->key ?? null;
+
         $shipmentItems[] = $this->buildShipmentItems(
             $labelUrl,
             $shipmentNumber
         );
 
-        $this->debugger(json_encode($storageObject->toArray()));
+        $logData['shipment_items'] = $shipmentItems;
+
+        // Update shipping package
+        $packageInfo = $this->buildPackageInfo(
+            $shipmentNumber,
+            $storageObject->key
+        );
 
         $this->orderShippingPackage->updateOrderShippingPackage(
             (int)$sequenceNumber,
-            $this->buildPackageInfo(
-                $shipmentNumber,
-                $storageObject->key
-            )
+            $packageInfo
         );
+
+        $logData['package_info'] = $packageInfo;
+
+        $this->debugger(json_encode($logData));
 
         return $shipmentItems;
     }
