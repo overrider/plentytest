@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 58;
+    private $plugin_revision = 59;
 
     /**
      * ShipmentController constructor.
@@ -209,7 +209,7 @@ class ShippingController extends Controller
                     ];
 
                     // handles the response
-                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package->id);
+                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], (string) $response['shipmentNumber'], $package->id);
 
                     // adds result
                     $this->createOrderResult[$orderId] = $this->buildResultArray(
