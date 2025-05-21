@@ -13,60 +13,29 @@ use Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepos
 use Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract;
 use Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract;
 use Plenty\Modules\Order\Shipping\ParcelService\Models\ParcelServicePreset;
+use Plenty\Modules\Plugin\Libs\Contracts\LibraryCallContract;
 use Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract;
 use Plenty\Plugin\Controller;
 use Plenty\Plugin\Http\Request;
 use Plenty\Plugin\ConfigRepository;
+use Plenty\Plugin\Log\Loggable;
 
 /**
  * Class ShippingController
  */
 class ShippingController extends Controller
 {
-    /**
-     * @var Request
-     */
-    private $request;
+    use Loggable;
 
     /**
-     * @var OrderRepositoryContract $orderRepository
+     * @var string
      */
-    private $orderRepository;
+    const PLUGIN_NAME = "CargoConnect";
 
     /**
-     * @var AddressRepositoryContract $addressRepository
+     * @var array
      */
-    private $addressRepository;
-
-    /**
-     * @var OrderShippingPackageRepositoryContract $orderShippingPackage
-     */
-    private $orderShippingPackage;
-
-    /**
-     * @var ShippingInformationRepositoryContract
-     */
-    private $shippingInformationRepositoryContract;
-
-    /**
-     * @var StorageRepositoryContract $storageRepository
-     */
-    private $storageRepository;
-
-    /**
-     * @var ShippingPackageTypeRepositoryContract
-     */
-    private $shippingPackageTypeRepositoryContract;
-
-    /**
-     * @var  array
-     */
-    private $createOrderResult = [];
-
-    /**
-     * @var ConfigRepository
-     */
-    private $config;
+    private array $createOrderResult = [];
 
     /**
      * ShipmentController constructor.
@@ -79,26 +48,21 @@ class ShippingController extends Controller
      * @param ShippingInformationRepositoryContract $shippingInformationRepositoryContract
      * @param ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
      * @param ConfigRepository $config
+     * @param \Plenty\Modules\Plugin\Libs\Contracts\LibraryCallContract $libraryCall
      */
-    public function __construct(Request $request,
-                                OrderRepositoryContract $orderRepository,
-                                AddressRepositoryContract $addressRepositoryContract,
-                                OrderShippingPackageRepositoryContract $orderShippingPackage,
-                                StorageRepositoryContract $storageRepository,
-                                ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
-                                ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
-                                ConfigRepository $config)
+    public function __construct(
+        public Request $request,
+        public OrderRepositoryContract $orderRepository,
+        public AddressRepositoryContract $addressRepositoryContract,
+        public OrderShippingPackageRepositoryContract $orderShippingPackage,
+        public StorageRepositoryContract $storageRepository,
+        public ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
+        public ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
+        public ConfigRepository $config,
+        public LibraryCallContract $libraryCall
+    )
     {
-        $this->request = $request;
-        $this->orderRepository = $orderRepository;
-        $this->addressRepository = $addressRepositoryContract;
-        $this->orderShippingPackage = $orderShippingPackage;
-        $this->storageRepository = $storageRepository;
-
-        $this->shippingInformationRepositoryContract = $shippingInformationRepositoryContract;
-        $this->shippingPackageTypeRepositoryContract = $shippingPackageTypeRepositoryContract;
-
-        $this->config = $config;
+        parent::__construct();
     }
 
 
@@ -107,9 +71,9 @@ class ShippingController extends Controller
      *
      * @param Request $request
      * @param array $orderIds
-     * @return string
+     * @return array
      */
-    public function registerShipments(Request $request, $orderIds)
+    public function registerShipments(Request $request, array $orderIds): array
     {
         $orderIds = $this->getOrderIds($request, $orderIds);
         $orderIds = $this->getOpenOrderIds($orderIds);
@@ -153,9 +117,11 @@ class ShippingController extends Controller
                 // determine packageType
                 $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
 
+                $this->getLogger(identifier: __METHOD__)
+                    ->error(code: 'package data', additionalInfo: ['package' => $packageType, 'packageId' => $package->packageId]);
+
                 // package dimensions
                 list($length, $width, $height) = $this->getPackageDimensions($packageType);
-
 
                 try
                 {
@@ -165,9 +131,9 @@ class ShippingController extends Controller
                     // shipping service providers API should be used here
                     $response = [
                         'labelUrl' => 'https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg',
-                        'shipmentNumber' => '1111112222223333',
-                        'sequenceNumber' => "1",
-                        'status' => 'shipment sucessfully registered'
+                        'shipmentNumber' => (string)rand(min: 1000000, max: 9999999),
+                        'sequenceNumber' => 1,
+                        'status' => 'shipment successfully registered'
                     ];
 
                     // handles the response
@@ -178,27 +144,57 @@ class ShippingController extends Controller
                         true,
                         $this->getStatusMessage($response),
                         false,
-                        $shipmentItems);
+                        $shipmentItems
+                    );
 
                     // saves shipping information
-                    $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
-
-
+                    $this->saveShippingInformation(
+                        orderId: $orderId,
+                        shipmentDate: $shipmentDate,
+                        shipmentItems: $shipmentItems
+                    );
                 }
                 catch(\SoapFault $soapFault)
                 {
                     // handle exception
                 }
-
             }
-
         }
 
         // return all results to service
         return $this->createOrderResult;
     }
 
+    /**
+     * @param \Plenty\Plugin\Http\Request $request
+     * @param array $orderIds
+     * @return array
+     */
+    public function getLabels(Request $request, array $orderIds): array
+    {
+        $orderIds = $this->getOrderIds($request, $orderIds);
+        $labels = [];
 
+        foreach ($orderIds as $orderId) {
+            $results = $this->orderShippingPackage->listOrderShippingPackages($orderId);
+            /* @var \Plenty\Modules\Order\Shipping\Package\Models\OrderShippingPackage $result */
+            foreach ($results as $result) {
+
+                $labelKey = explode(separator: '/', string: $result->labelPath)[1];
+
+                if ($this->storageRepository->doesObjectExist(pluginName: self::PLUGIN_NAME, key: $labelKey)) {
+                    $storageObject = $this->storageRepository->getObject(
+                        pluginName: self::PLUGIN_NAME,
+                        key: $labelKey
+                    );
+
+                    $labels[] = $storageObject->body;
+                }
+            }
+        }
+
+        return $labels;
+    }
 
     /**
      * Cancels registered shipment(s)
@@ -210,6 +206,7 @@ class ShippingController extends Controller
     public function deleteShipments(Request $request, $orderIds)
     {
         $orderIds = $this->getOrderIds($request, $orderIds);
+
         foreach ($orderIds as $orderId)
         {
             $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
@@ -223,33 +220,27 @@ class ShippingController extends Controller
                         $shipmentNumber = $additionalData['shipmentNumber'];
 
                         // use the shipping service provider's API here
-                        $response = '';
+                        $response = [];
 
                         $this->createOrderResult[$orderId] = $this->buildResultArray(
                             true,
-                            $this->getStatusMessage($response),
-                            false,
-                            null);
-
+                            $this->getStatusMessage($response)
+                        );
                     }
                     catch(\SoapFault $soapFault)
                     {
                         // exception handling
                     }
-
                 }
 
                 // resets the shipping information of current order
                 $this->shippingInformationRepositoryContract->resetShippingInformation($orderId);
             }
-
-
         }
 
         // return result array
         return $this->createOrderResult;
     }
-
 
     /**
      * Retrieves the label file from a given URL and saves it in S3 storage
@@ -258,38 +249,29 @@ class ShippingController extends Controller
      * @param $key
      * @return StorageObject
      */
-    private function saveLabelToS3($labelUrl, $key)
+    private function saveLabelToS3($labelUrl, $key): StorageObject
     {
-        $ch = curl_init();
+        $output = $this->download(fileUrl: $labelUrl);
 
-        // Set URL to download
-        curl_setopt($ch, CURLOPT_URL, $labelUrl);
+        $this->getLogger(identifier: __METHOD__)->error(
+            code: 'save to S3 data: ',
+            additionalInfo: [
+                'data'     => base64_encode($output),
+                'key'      => $key,
+                'labelUrl' => $labelUrl
+            ]
+        );
 
-        // Include header in result? (0 = yes, 1 = no)
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-
-        // Should cURL return or print out the data? (true = return, false = print)
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        // Timeout in seconds
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-        // Download the given URL, and return output
-        $output = curl_exec($ch);
-
-        // Close the cURL resource, and free system resources
-        curl_close($ch);
-        return $this->storageRepository->uploadObject('CargoConnect', $key, $output);
-
+        return $this->storageRepository->uploadObject(self::PLUGIN_NAME, $key, $output);
     }
 
     /**
      * Returns the parcel service preset for the given Id.
      *
      * @param int $parcelServicePresetId
-     * @return ParcelServicePreset
+     * @return \Plenty\Modules\Order\Shipping\ParcelService\Models\ParcelServicePreset|null
      */
-    private function getParcelServicePreset($parcelServicePresetId)
+    private function getParcelServicePreset(int $parcelServicePresetId): ?ParcelServicePreset
     {
         /** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
         $parcelServicePresetRepository = pluginApp(ParcelServicePresetRepositoryContract::class);
@@ -312,7 +294,7 @@ class ShippingController extends Controller
      * @param array $response
      * @return string
      */
-    private function getStatusMessage($response)
+    private function getStatusMessage(array $response): string
     {
         return 'Code: '.$response['status']; // should contain error code and descriptive part
     }
@@ -324,13 +306,13 @@ class ShippingController extends Controller
      * @param $shipmentDate
      * @param $shipmentItems
      */
-    private function saveShippingInformation($orderId, $shipmentDate, $shipmentItems)
+    private function saveShippingInformation($orderId, $shipmentDate, $shipmentItems): void
     {
-        $transactionIds = array();
+        $transactionIds = [];
+
         foreach ($shipmentItems as $shipmentItem)
         {
             $transactionIds[] = $shipmentItem['shipmentNumber'];
-
         }
 
         $shipmentAt = date(\DateTime::W3C, strtotime($shipmentDate));
@@ -347,8 +329,7 @@ class ShippingController extends Controller
             'shipmentAt' => $shipmentAt
 
         ];
-        $this->shippingInformationRepositoryContract->saveShippingInformation(
-            $data);
+        $this->shippingInformationRepositoryContract->saveShippingInformation($data);
     }
 
     /**
@@ -357,10 +338,10 @@ class ShippingController extends Controller
      * @param array $orderIds
      * @return array
      */
-    private function getOpenOrderIds($orderIds)
+    private function getOpenOrderIds(array $orderIds): array
     {
+        $openOrderIds = [];
 
-        $openOrderIds = array();
         foreach ($orderIds as $orderId)
         {
             $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
@@ -382,7 +363,7 @@ class ShippingController extends Controller
      * @param array $shipmentItems
      * @return array
      */
-    private function buildResultArray($success = false, $statusMessage = '', $newShippingPackage = false, $shipmentItems = [])
+    private function buildResultArray(bool $success = false, string$statusMessage = '', bool $newShippingPackage = false, array $shipmentItems = []): array
     {
         return [
             'success' => $success,
@@ -399,7 +380,7 @@ class ShippingController extends Controller
      * @param string $shipmentNumber
      * @return array
      */
-    private function buildShipmentItems($labelUrl, $shipmentNumber)
+    private function buildShipmentItems(string $labelUrl, string $shipmentNumber): array
     {
         return  [
             'labelUrl' => $labelUrl,
@@ -414,11 +395,12 @@ class ShippingController extends Controller
      * @param string $labelUrl
      * @return array
      */
-    private function buildPackageInfo($packageNumber, $labelUrl)
+    private function buildPackageInfo(string $packageNumber, string $labelUrl): array
     {
         return [
             'packageNumber' => $packageNumber,
-            'label' => $labelUrl
+            'label' => $labelUrl,
+            'labelPath' => $labelUrl,
         ];
     }
 
@@ -429,7 +411,7 @@ class ShippingController extends Controller
      * @param $orderIds
      * @return array
      */
-    private function getOrderIds(Request $request, $orderIds)
+    private function getOrderIds(Request $request, $orderIds): array
     {
         if (is_numeric($orderIds))
         {
@@ -437,8 +419,9 @@ class ShippingController extends Controller
         }
         else if (!is_array($orderIds))
         {
-            $orderIds = $request->get('orderIds');
+            $orderIds = $request->get(key: 'orderIds');
         }
+
         return $orderIds;
     }
 
@@ -474,22 +457,63 @@ class ShippingController extends Controller
      * @param string $sequenceNumber
      * @return array
      */
-    private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber)
+    private function handleAfterRegisterShipment(string $labelUrl, string $shipmentNumber, string $sequenceNumber): array
     {
-        $shipmentItems = array();
+        $shipmentItems = [];
+
+        $key = $shipmentNumber . '.pdf';
+
         $storageObject = $this->saveLabelToS3(
-            $labelUrl,
-            $shipmentNumber . '.pdf');
+            labelUrl: $labelUrl,
+            key: $key
+        );
+
+        $objectUrl = $this->storageRepository->getObjectUrl(self::PLUGIN_NAME, $key);
+
+        $this->getLogger(identifier: __FUNCTION__)->error(
+            code: 'storage data: ',
+            additionalInfo: [
+                'storageObject' => $storageObject,
+                'url' => $labelUrl,
+                'fileUrl' => $objectUrl
+            ]
+        );
+
+        $url = $objectUrl;
 
         $shipmentItems[] = $this->buildShipmentItems(
-            $labelUrl,
-            $shipmentNumber);
+            labelUrl: $url,
+            shipmentNumber: $shipmentNumber
+        );
 
         $this->orderShippingPackage->updateOrderShippingPackage(
-            $sequenceNumber,
-            $this->buildPackageInfo(
-                $shipmentNumber,
-                $storageObject->key));
+            orderShippingPackageId: (int)$sequenceNumber,
+            data: $this->buildPackageInfo(packageNumber: $shipmentNumber, labelUrl: $storageObject->key)
+        );
+
         return $shipmentItems;
+    }
+
+    /**
+     * @param string $fileUrl
+     * @return string
+     */
+    private function download(string $fileUrl): string
+    {
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_URL, $fileUrl);
+
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        $output = curl_exec($ch);
+
+        curl_close($ch);
+
+        return $output;
     }
 }

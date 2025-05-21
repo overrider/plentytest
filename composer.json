@@ -1,6 +1,8 @@
 {
     "name": "cargo/connect",
     "description": "PlentyOne Shipping Plugin",
+    "type": "plentymarkets-plugin",
+    "license": "AGPL-3.0",
     "authors": [
         {
             "name": "Piotr",
@@ -8,6 +10,7 @@
         }
     ],
     "require": {
+        "php": ">=8.2",
         "plentymarkets/plugin-interface": "dev-beta7",
       "ext-curl": "*",
       "ext-json": "*",

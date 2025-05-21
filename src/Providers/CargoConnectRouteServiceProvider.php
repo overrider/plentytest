@@ -16,9 +16,12 @@ class CargoConnectRouteServiceProvider extends RouteServiceProvider
      */
     public function map(Router $router): void
     {
-        $router->post('shipment/cargo_connect/register_shipments', [
-            'middleware' => 'oauth',
-            'uses'       => 'CargoConnect\Controllers\ShipmentController@registerShipments'
-        ]);
+        $router->post(
+            uri: 'shipment/cargo_connect/register_shipments',
+            action: [
+                'middleware' => 'oauth',
+                'uses' => 'CargoConnect\Controllers\ShipmentController@registerShipments'
+            ]
+        );
   	}
 }

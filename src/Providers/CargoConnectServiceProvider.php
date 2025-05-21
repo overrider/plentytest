@@ -26,12 +26,12 @@ class CargoConnectServiceProvider extends ServiceProvider
     public function boot(ShippingServiceProviderService $shippingServiceProviderService): void
     {
         $shippingServiceProviderService->registerShippingProvider(
-            'CargoConnect',
-            [
+            shippingServiceProviderCode: 'CargoConnect',
+            shippingServiceProviderNames: [
                 'de' => 'Cargo International Connect',
                 'en' => 'Cargo International Connect'
             ],
-            [
+            shippingServiceProviderClasses: [
                 'CargoConnect\\Controllers\\ShippingController@registerShipments',
                 'CargoConnect\\Controllers\\ShippingController@deleteShipments',
             ]
