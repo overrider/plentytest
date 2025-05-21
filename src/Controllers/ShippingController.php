@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 54;
+    private $plugin_revision = 57;
 
     /**
      * ShipmentController constructor.
@@ -155,6 +155,8 @@ class ShippingController extends Controller
         {
             $order = $this->orderRepository->findOrderById($orderId);
 
+            // gathering required data for registering the shipment
+
             /** @var Address $address */
             $address = $order->deliveryAddress;
 
@@ -164,69 +166,44 @@ class ShippingController extends Controller
             $receiverNo            = $address->houseNumber;
             $receiverPostalCode    = $address->postalCode;
             $receiverTown          = $address->town;
-            $receiverCountry       = $address->country->name;
-            $receiverCompany       = $address->companyName;
+            $receiverCountry       = $address->country->name; // or: $address->country->isoCode2
 
             // reads sender data from plugin config. this is going to be changed in the future to retrieve data from backend ui settings
-            $senderName           = $this->config->get('CargoConnect.senderName', 'plentymarkets GmbH - Timo Zenke');
-            $senderStreet         = $this->config->get('CargoConnect.senderStreet', 'Bürgermeister-Brunner-Str.');
-            $senderNo             = $this->config->get('CargoConnect.senderNo', '15');
-            $senderPostalCode     = $this->config->get('CargoConnect.senderPostalCode', '34117');
-            $senderTown           = $this->config->get('CargoConnect.senderTown', 'Kassel');
-            $senderCountryID      = $this->config->get('CargoConnect.senderCountry', '0');
+            $senderName           = $this->config->get('ShippingTutorial.senderName', 'plentymarkets GmbH - Timo Zenke');
+            $senderStreet         = $this->config->get('ShippingTutorial.senderStreet', 'Bürgermeister-Brunner-Str.');
+            $senderNo             = $this->config->get('ShippingTutorial.senderNo', '15');
+            $senderPostalCode     = $this->config->get('ShippingTutorial.senderPostalCode', '34117');
+            $senderTown           = $this->config->get('ShippingTutorial.senderTown', 'Kassel');
+            $senderCountryID      = $this->config->get('ShippingTutorial.senderCountry', '0');
             $senderCountry        = ($senderCountryID == 0 ? 'Germany' : 'Austria');
-            $shippingProfileId    = $order->shippingProfileId;
 
             // gets order shipping packages from current order
             $packages = $this->orderShippingPackage->listOrderShippingPackages($order->id);
 
-            $cargoOrderPackages = [];
-
             // iterating through packages
             foreach($packages as $package)
             {
-                // determine packageType
-                $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
-
                 // weight
                 $weight = $package->weight;
+
+                // determine packageType
+                $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
 
                 // package dimensions
                 list($length, $width, $height) = $this->getPackageDimensions($packageType);
 
-                $cargoOrderPackages[] = [
-                    'length' => $length,
-                    'width' => $width,
-                    'height' => $height,
-                    'weight' => $weight,
-                    'packageType' => $packageType->name
-                ];
 
-                $response = [
-                    'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
-                    'shipmentNumber' => (string) rand(100000, 999999),
-                    'sequenceNumber' => $package->id,
-                    'status' => 'shipment successfully registered'
-                ];
-
-                $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], (string) $response['sequenceNumber']);
-
-                // adds result
-                $this->createOrderResult[$orderId] = $this->buildResultArray(
-                    true,
-                    $this->getStatusMessage($response),
-                    false,
-                    $shipmentItems
-                );
-
-                /*try
+                try
                 {
+                    // check wether we are in test or productive mode, use different login or connection data
+                    $mode = $this->config->get('ShippingTutorial.mode', '0');
+
                     // shipping service providers API should be used here
                     $response = [
-                        'labelUrl' => 'https://doc.phomemo.com/Labels-Sample.pdf',
-                        'shipmentNumber' => (string) rand(100000, 999999),
-                        'sequenceNumber' => $package->id,
-                        'status' => 'shipment successfully registered'
+                        'labelUrl' => 'https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg',
+                        'shipmentNumber' => '1111112222223333',
+                        'sequenceNumber' => 1,
+                        'status' => 'shipment sucessfully registered via cargo connect'
                     ];
 
                     // handles the response
@@ -237,18 +214,20 @@ class ShippingController extends Controller
                         true,
                         $this->getStatusMessage($response),
                         false,
-                        $shipmentItems
-                    );
+                        $shipmentItems);
 
                     // saves shipping information
                     $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
+
+
                 }
                 catch(\SoapFault $soapFault)
                 {
-                    $this->debugger($soapFault->getMessage());
-                }*/
+                    // handle exception
+                }
 
             }
+
         }
 
         // return all results to service
@@ -636,31 +615,20 @@ class ShippingController extends Controller
      */
     private function handleAfterRegisterShipment(string $labelUrl, string $shipmentNumber, string $sequenceNumber)
     {
-        $shipmentItems = [];
-
+        $shipmentItems = array();
         $storageObject = $this->saveLabelToS3(
             $labelUrl,
-            $shipmentNumber . '.pdf'
-        );
-
-        $this->debugger(json_encode($storageObject->toArray()));
+            $shipmentNumber . '.pdf');
 
         $shipmentItems[] = $this->buildShipmentItems(
-            "https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg",
-            $shipmentNumber
-        );
-
-        // Update shipping package
-        $packageInfo = $this->buildPackageInfo(
-            $shipmentNumber,
-            $storageObject->key
-        );
+            $labelUrl,
+            $shipmentNumber);
 
         $this->orderShippingPackage->updateOrderShippingPackage(
-            (int)$sequenceNumber,
-            $packageInfo
-        );
-
+            $sequenceNumber,
+            $this->buildPackageInfo(
+                $shipmentNumber,
+                $storageObject->key));
         return $shipmentItems;
     }
 
