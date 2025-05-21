@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 49;
+    private $plugin_revision = 50;
 
     /**
      * ShipmentController constructor.
@@ -147,6 +147,8 @@ class ShippingController extends Controller
      */
     public function registerShipments(Request $request, array $orderIds): array
     {
+        $this->debugger((string)$this->plugin_revision);
+
         $orderIds = $this->getOrderIds($request, $orderIds);
         $orderIds = $this->getOpenOrderIds($orderIds);
         $shipmentDate = date('Y-m-d');
