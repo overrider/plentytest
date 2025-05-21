@@ -34,6 +34,7 @@ class CargoConnectServiceProvider extends ServiceProvider
             shippingServiceProviderClasses: [
                 'CargoConnect\\Controllers\\ShippingController@registerShipments',
                 'CargoConnect\\Controllers\\ShippingController@deleteShipments',
+                'CargoConnect\\Controllers\\ShippingController@getLabels',
             ]
         );
     }

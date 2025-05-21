@@ -199,6 +199,8 @@ class ShippingController extends Controller
         return $labels;
     }
 
+
+
     /**
      * Cancels registered shipment(s)
      *
