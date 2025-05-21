@@ -96,7 +96,7 @@ class ShippingController extends Controller
      */
     private $config;
 
-    private $plugin_revision = 52;
+    private $plugin_revision = 53;
 
     /**
      * ShipmentController constructor.
@@ -636,12 +636,6 @@ class ShippingController extends Controller
      */
     private function handleAfterRegisterShipment(string $labelUrl, string $shipmentNumber, string $sequenceNumber)
     {
-        $logData = [
-            'label_url' => $labelUrl,
-            'shipment_number' => $shipmentNumber,
-            'sequence_number' => $sequenceNumber
-        ];
-
         $shipmentItems = [];
 
         $storageObject = $this->saveLabelToS3(
@@ -649,14 +643,10 @@ class ShippingController extends Controller
             $shipmentNumber . '.pdf'
         );
 
-        $logData['s3_storage_key'] = $storageObject->key ?? null;
-
         $shipmentItems[] = $this->buildShipmentItems(
-            $labelUrl,
+            $storageObject->toArray()["message"]["path"],
             $shipmentNumber
         );
-
-        $logData['shipment_items'] = $shipmentItems;
 
         // Update shipping package
         $packageInfo = $this->buildPackageInfo(
@@ -668,10 +658,6 @@ class ShippingController extends Controller
             (int)$sequenceNumber,
             $packageInfo
         );
-
-        $logData['package_info'] = $packageInfo;
-
-        $this->debugger(json_encode($logData));
 
         return $shipmentItems;
     }
