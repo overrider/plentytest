@@ -1,40 +1,46 @@
 <?php
 
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace CargoConnect\Providers;
 
+use CargoConnect\Helpers\ShippingServiceProvider;
+use Plenty\Log\Services\ReferenceContainer;
+use Plenty\Log\Exceptions\ReferenceTypeException;
 use Plenty\Modules\Order\Shipping\ServiceProvider\Services\ShippingServiceProviderService;
 use Plenty\Plugin\ServiceProvider;
 
-/**
- * Class CargoConnectServiceProvider
- * @package CargoConnect\Providers
- */
-class CargoConnectServiceProvider extends ServiceProvider
+final class CargoConnectServiceProvider extends ServiceProvider
 {
-
-	/**
-	 * Register the service provider.
-	 */
-	public function register(): void
-	{
-        // add REST routes by registering a RouteServiceProvider if necessary
-        // $this->getApplication()->register(CargoConnectRouteServiceProvider::class);
+    /**
+     * @return void
+     */
+    public function register(): void
+    {
     }
 
-    public function boot(ShippingServiceProviderService $shippingServiceProviderService): void
+    /**
+     * @param \Plenty\Log\Services\ReferenceContainer $referenceContainer
+     * @param \Plenty\Modules\Order\Shipping\ServiceProvider\Services\ShippingServiceProviderService $shippingServiceProviderService
+     * @return void
+     */
+    public function boot(ReferenceContainer $referenceContainer, ShippingServiceProviderService $shippingServiceProviderService): void
     {
+        try {
+            $referenceContainer->add(referenceTypes: [
+                "CargoConnect" => "CargoConnect"
+            ]);
+        } catch (ReferenceTypeException $exception) {}
+
         $shippingServiceProviderService->registerShippingProvider(
-            shippingServiceProviderCode: 'CargoConnect',
+            shippingServiceProviderCode: ShippingServiceProvider::PLUGIN_NAME,
             shippingServiceProviderNames: [
-                'de' => 'Cargo International Connect',
-                'en' => 'Cargo International Connect'
+                'de' => ShippingServiceProvider::SHIPPING_SERVICE_PROVIDER_NAME,
+                'en' => ShippingServiceProvider::SHIPPING_SERVICE_PROVIDER_NAME
             ],
             shippingServiceProviderClasses: [
                 'CargoConnect\\Controllers\\ShippingController@registerShipments',
-                'CargoConnect\\Controllers\\ShippingController@deleteShipments',
-                'CargoConnect\\Controllers\\ShippingController@getLabels',
+                'CargoConnect\\Controllers\\ShippingController@getLabels'
             ]
         );
     }
