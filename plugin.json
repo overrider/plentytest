@@ -3,22 +3,22 @@
       "marketplaceName"       : [{"en":"Connect Shippingplugin", "de":"Connect Versandplugin"}],
       "description"           : "A bridge between Cargo International GmbH and PlentyOne",
       "namespace"             : "CargoConnect",
-      "author"                : "David S.",
+      "author"                : "Piotr J.",
       "type"                  : "shipping",
       "isClosedSource"        : true,
-      "version"               : "0.6.1",
+      "version"               : "0.6.2",
       "license"               : "AGPL-3.0",
       "pluginIcon"            : "icon_plugin_xs.png",
       "price"                 : 0.00,
       "shortDescription"      : {"en": "Connect PlentyOne Bridge", "de": "Connect PlentyOne Bridge"},
       "keywords"              : ["plugin", "shipping"],
       "authorIcon"            : "icon_author_xs.png",
-      "email"                 : "d.schulz@spedition.de",
-      "phone"                 : "+49 176 32154637",
+      "email"                 : "p.janczewski@spedition.de",
+      "phone"                 : "",
       "platform": {
             "php": ">=7.3 <8.1"
       },
-      "serviceProvider": "GoExpress\\Providers\\GoExpressServiceProvider",
+      "serviceProvider": "CargoConnect\\Providers\\CargoConnectServiceProvider",
       "runOnBuild": [
             "CargoConnect\\Migrations\\CreateShippingServiceProvider"
       ]
