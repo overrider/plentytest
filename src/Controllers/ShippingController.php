@@ -140,7 +140,7 @@ class ShippingController extends Controller
                     ];
 
                     // handles the response
-                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package->id);
+                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], (string) $package->id);
 
                     // adds result
                     $this->createOrderResult[$orderId] = $this->buildResultArray(
