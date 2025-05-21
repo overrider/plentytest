@@ -9,7 +9,7 @@ use Plenty\Log\Services\ReferenceContainer;
 use Plenty\Modules\Order\Shipping\ServiceProvider\Services\ShippingServiceProviderService;
 use Plenty\Plugin\ServiceProvider;
 
-final class CargoConnectServiceProvider extends ServiceProvider
+class CargoConnectServiceProvider extends ServiceProvider
 {
     /**
      * @return void

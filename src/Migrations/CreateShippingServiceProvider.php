@@ -9,7 +9,7 @@ use Exception;
 use Plenty\Modules\Order\Shipping\ServiceProvider\Contracts\ShippingServiceProviderRepositoryContract;
 use Plenty\Plugin\Log\Loggable;
 
-final readonly class CreateShippingServiceProvider
+class CreateShippingServiceProvider
 {
     use Loggable;
 
