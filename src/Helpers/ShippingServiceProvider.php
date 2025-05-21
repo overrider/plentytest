@@ -7,5 +7,5 @@ namespace CargoConnect\Helpers;
 class ShippingServiceProvider
 {
     const PLUGIN_NAME = "CargoConnect";
-    const SHIPPING_SERVICE_PROVIDER_NAME = "CargoConnect";
+    const SHIPPING_SERVICE_PROVIDER_NAME = "CargoInternational Connect";
 }
