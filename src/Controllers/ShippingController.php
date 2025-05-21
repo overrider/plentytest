@@ -63,6 +63,9 @@ class ShippingController extends Controller
     )
     {
         parent::__construct();
+
+        $this->getLogger(identifier: __METHOD__)
+            ->info(code: 'CargoConnect', additionalInfo: ['status' => 'CargoConnect shipment controller initialized']);
     }
 
 
