@@ -156,7 +156,7 @@ class ShippingController extends Controller
                     "sender" => $senderAddress->toArray(),
                     "receiver" => $receiverAddress->toArray(),
                     "shippingProfileName" => $this->getParcelServicePreset(
-                        parcelServicePresetId: $order->shippingProfileId
+                        parcelServicePresetId: (int) $order->shippingProfileId
                     )->backendName,
                     "packages" => array_map(
                         callback: fn(Package $package) => $package->toArray(),
