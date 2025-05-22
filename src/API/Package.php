@@ -35,7 +35,7 @@ class Package
             'length' => $this->length,
             'width' => $this->width,
             'height' => $this->height,
-            'weight' => $this->weight,
+            'weight' => $this->weight / 1000,
             'colli' => $this->colli,
             'contents' => $this->content
         ];
