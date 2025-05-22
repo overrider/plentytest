@@ -8,7 +8,6 @@ use CargoConnect\API\Address;
 use CargoConnect\API\Package;
 use DateTimeInterface;
 use Plenty\Modules\Cloud\Storage\Models\StorageObject;
-use Plenty\Modules\Listing\ShippingProfile\Contracts\ShippingProfileRepositoryContract;
 use Plenty\Modules\Order\Contracts\OrderRepositoryContract;
 use Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContract;
 use Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract;
@@ -47,7 +46,6 @@ class ShippingController extends Controller
      * @param \Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract $storageRepository
      * @param \Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract $shippingInformationRepositoryContract
      * @param \Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
-     * @param \Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContract $parcelServicePresetRepositoryContract
      * @param \Plenty\Plugin\ConfigRepository $config
      */
     public function __construct(
@@ -56,7 +54,6 @@ class ShippingController extends Controller
         public StorageRepositoryContract $storageRepository,
         public ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
         public ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
-        public ParcelServicePresetRepositoryContract $parcelServicePresetRepositoryContract,
         public ConfigRepository $config
     ) {
        parent::__construct();
@@ -151,8 +148,6 @@ class ShippingController extends Controller
                 ]);
             }
 
-
-
             // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
                 payload: [
@@ -160,8 +155,8 @@ class ShippingController extends Controller
                     "pickupDate" => $shipmentDate,
                     "sender" => $senderAddress->toArray(),
                     "receiver" => $receiverAddress->toArray(),
-                    "shippingProfileName" => $this->parcelServicePresetRepositoryContract->getPresetById(
-                        presetId: $order->shippingProfileId
+                    "shippingProfileName" => $this->getParcelServicePreset(
+                        parcelServicePresetId: $order->shippingProfileId
                     )->backendName,
                     "packages" => array_map(
                         callback: fn(Package $package) => $package->toArray(),
@@ -173,7 +168,8 @@ class ShippingController extends Controller
             if (isset($response["error"])) {
                 $this->getLogger(identifier: __METHOD__)->error(
                     code: "CargoConnect::API.ERROR",
-                    additionalInfo: ["response" => json_encode(value: $response)]);
+                    additionalInfo: ["response" => json_encode(value: $response)]
+                );
 
                 continue;
             } else {
