@@ -17,4 +17,22 @@ class Address
         public ?string $email = null,
         public ?string $company = null
     ) {}
+
+    /**
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            "firstname" => $this->forename,
+            "lastname" => $this->surname,
+            "street" => $this->street,
+            "country" => $this->country,
+            "zip" => $this->postalCode,
+            "city" => $this->city,
+            "phone" => $this->phone,
+            "email" => $this->email,
+            "company" => $this->company
+        ];
+    }
 }
