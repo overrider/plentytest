@@ -545,10 +545,13 @@ class ShippingController extends Controller
 
         $response = curl_exec($ch);
 
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $body = substr($response, $headerSize);
+
         curl_close($ch);
 
         return json_decode(
-            json: $response,
+            json: $body,
             associative: true
         );
     }
