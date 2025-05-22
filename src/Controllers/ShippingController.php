@@ -283,7 +283,7 @@ class ShippingController extends Controller
         );
 
         $storageObject = $this->saveLabelToS3(
-            label: base64_decode(string: $label),
+            label: $label,
             key: $packageId . ".pdf"
         );
 
