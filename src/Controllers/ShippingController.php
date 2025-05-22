@@ -8,6 +8,7 @@ use CargoConnect\API\Address;
 use CargoConnect\API\Package;
 use DateTimeInterface;
 use Plenty\Modules\Cloud\Storage\Models\StorageObject;
+use Plenty\Modules\Listing\ShippingProfile\Contracts\ShippingProfileRepositoryContract;
 use Plenty\Modules\Order\Contracts\OrderRepositoryContract;
 use Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContract;
 use Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract;
@@ -46,6 +47,7 @@ class ShippingController extends Controller
      * @param \Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract $storageRepository
      * @param \Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract $shippingInformationRepositoryContract
      * @param \Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
+     * @param \Plenty\Modules\Listing\ShippingProfile\Contracts\ShippingProfileRepositoryContract $shippingProfileRepositoryContract
      * @param \Plenty\Plugin\ConfigRepository $config
      */
     public function __construct(
@@ -54,6 +56,7 @@ class ShippingController extends Controller
         public StorageRepositoryContract $storageRepository,
         public ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
         public ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
+        public ShippingProfileRepositoryContract $shippingProfileRepositoryContract,
         public ConfigRepository $config
     ) {
        parent::__construct();
@@ -100,6 +103,18 @@ class ShippingController extends Controller
                 orderId: $orderId
             );
 
+            $receiverAddress = pluginApp(abstract: Address::class, parameters: [
+                "forename" => $order->deliveryAddress->firstName,
+                "surname" => $order->deliveryAddress->lastName,
+                "street" => "{$order->deliveryAddress->street} {$order->deliveryAddress->houseNumber}",
+                "country" => $order->deliveryAddress->country->isoCode2,
+                "postalCode" => $order->deliveryAddress->postalCode,
+                "city" => $order->deliveryAddress->town,
+                "phone" => $order->deliveryAddress->phone,
+                "email" => $order->deliveryAddress->email,
+                "company" => $order->deliveryAddress->companyName
+            ]);
+
             $this->getLogger(identifier: __METHOD__)->addReference(
                 referenceType: "orderId",
                 referenceValue: $orderId
@@ -141,7 +156,11 @@ class ShippingController extends Controller
                     "orderId" => $orderId,
                     "pickupDate" => $shipmentDate,
                     "sender" => $senderAddress->toArray(),
-                    "parcels" => array_map(
+                    "receiver" => $receiverAddress->toArray(),
+                    "shippingProfileId" => $this->shippingProfileRepositoryContract->get(
+                        id: $order->shippingProfileId
+                    )->name,
+                    "packages" => array_map(
                         callback: fn(Package $package) => $package->toArray(),
                         array: $connectParcels
                     )
@@ -184,19 +203,6 @@ class ShippingController extends Controller
                     shipmentItems: $shipmentItems
                 );
             }
-
-           /* $shipmentItems = $this->handleAfterRegisterShipment([], $packages[0]->id);
-
-            $this->createOrderResult[$orderId] = $this->buildResultArray(
-                success: true,
-                shipmentItems: $shipmentItems
-            );
-
-            $this->saveShippingInformation(
-                orderId: $orderId,
-                shipmentDate: $shipmentDate,
-                shipmentItems: $shipmentItems
-            );*/
         }
 
         return $this->createOrderResult;
