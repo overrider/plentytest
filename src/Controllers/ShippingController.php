@@ -136,7 +136,7 @@ class ShippingController extends Controller
                 ]);
             }
 
-            $this->submitCargoOrder(
+            $response = $this->submitCargoOrder(
                 payload: [
                     "orderId" => $orderId,
                     "pickupDate" => $shipmentDate,
@@ -148,7 +148,44 @@ class ShippingController extends Controller
                 ]
             );
 
-            $shipmentItems = $this->handleAfterRegisterShipment([], $packages[0]->id);
+            if (isset($response["error"])) {
+                $this->getLogger(identifier: __METHOD__)->error(
+                    code: "CargoConnect::API.ERROR",
+                    additionalInfo: ["response" => json_encode(value: $response)]);
+
+                continue;
+            } else {
+                $this->getLogger(identifier: __METHOD__)->debug(
+                    code: "CargoConnect::API.ORDER",
+                    additionalInfo: ["response" => json_encode(value: $response)]
+                );
+            }
+
+            $shipmentItems = [];
+
+            if (isset($response["label"])) {
+                $label = $response["label"];
+                $this->getLogger(identifier: __METHOD__)->debug(
+                    code: "CargoConnect::API.PDF",
+                    additionalInfo: ["label" => $label]
+                );
+
+                $shipmentItems = $this->handleAfterRegisterShipment($response, $packages[0]->id);
+
+                $this->createOrderResult[$orderId] = $this->buildResultArray(
+                    success: true,
+                    shipmentItems: $shipmentItems
+                );
+
+                $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
+            } else {
+                $this->createOrderResult[$orderId] = $this->buildResultArray(
+                    statusMessage: $response["error"],
+                    shipmentItems: $shipmentItems
+                );
+            }
+
+           /* $shipmentItems = $this->handleAfterRegisterShipment([], $packages[0]->id);
 
             $this->createOrderResult[$orderId] = $this->buildResultArray(
                 success: true,
@@ -159,7 +196,7 @@ class ShippingController extends Controller
                 orderId: $orderId,
                 shipmentDate: $shipmentDate,
                 shipmentItems: $shipmentItems
-            );
+            );*/
         }
 
         return $this->createOrderResult;
@@ -230,9 +267,9 @@ class ShippingController extends Controller
             max: 999999
         );
 
-        $label = $this->download(
+        $label =  $response["label"]; /*$this->download(
             fileUrl: "https://doc.phomemo.com/Labels-Sample.pdf"
-        );
+        );*/
 
         $this->getLogger(
             identifier: __METHOD__
