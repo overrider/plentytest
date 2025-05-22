@@ -533,11 +533,16 @@ class ShippingController extends Controller
 
         curl_setopt($ch, CURLOPT_HEADER, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+/*        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             "Authorization: Bearer " . $this->config->get(key: "CargoConnect.api_token"),
             "Content-Type: application/json"
+        ));*/
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Authorization: Bearer " . "d3dd7a0c-1edd-474f-9b4f-d1b9d30559af|pVgaLNU6OBns8wtxyxeOw5eG8lXZXEaSS8KOKDtl32c8a23b",
+            "Content-Type: application/json"
         ));
-        curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url"));
+       /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
+        curl_setopt($ch, CURLOPT_URL, "https://staging.spedition.de/api/plentyconnect/submit-order");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(value: $payload));
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
