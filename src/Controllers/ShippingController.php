@@ -192,8 +192,8 @@ class ShippingController extends Controller
         );
 
         $storageObject = $this->saveLabelToS3(
-            label: $label,
-            key: $packageId . '.pdf'
+            label: base64_decode(string: $label),
+            key: $packageId . ".pdf"
         );
 
         $this->getLogger(
@@ -208,7 +208,7 @@ class ShippingController extends Controller
         );
 
         $shipmentItems[] = $this->buildShipmentItems(
-            labelUrl: "path_to_pdf_in_S3",
+            labelUrl:  "path_to_pdf_in_S3", //"https://doc.phomemo.com/Labels-Sample.pdf",
             shipmentNumber: $shipmentNumber
         );
 
