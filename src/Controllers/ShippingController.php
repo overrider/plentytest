@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CargoConnect\Controllers;
 
+use CargoConnect\API\Address;
+use CargoConnect\API\Package;
 use DateTimeInterface;
 use Plenty\Modules\Cloud\Storage\Models\StorageObject;
 use Plenty\Modules\Order\Contracts\OrderRepositoryContract;
@@ -11,8 +13,10 @@ use Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContrac
 use Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract;
 use Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract;
 use Plenty\Modules\Order\Shipping\Package\Models\OrderShippingPackage;
+use Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract;
 use Plenty\Modules\Order\Shipping\ParcelService\Models\ParcelServicePreset;
 use Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract;
+use Plenty\Plugin\ConfigRepository;
 use Plenty\Plugin\Controller;
 use Plenty\Plugin\Http\Request;
 use Plenty\Plugin\Log\Loggable;
@@ -41,12 +45,16 @@ class ShippingController extends Controller
      * @param \Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract $orderShippingPackage
      * @param \Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract $storageRepository
      * @param \Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract $shippingInformationRepositoryContract
+     * @param \Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
+     * @param \Plenty\Plugin\ConfigRepository $config
      */
     public function __construct(
         public OrderRepositoryContract $orderRepository,
         public OrderShippingPackageRepositoryContract $orderShippingPackage,
         public StorageRepositoryContract $storageRepository,
         public ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
+        public ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
+        public ConfigRepository $config
     ) {
        parent::__construct();
     }
@@ -68,11 +76,23 @@ class ShippingController extends Controller
 
         $shipmentDate = date(format: "Y-m-d");
 
+        $senderAddress = pluginApp(abstract: Address::class,parameters: [
+            "forename" => $this->config->get(key: "CargoConnect.pickup_firstname"),
+            "surname" => $this->config->get(key: "CargoConnect.pickup_lastname"),
+            "street" => $this->config->get(key: "CargoConnect.pickup_street"),
+            "country" => $this->config->get(key: "CargoConnect.pickup_country"),
+            "postalCode" => $this->config->get(key: "CargoConnect.pickup_zip"),
+            "city" => $this->config->get(key: "CargoConnect.pickup_city"),
+            "phone" => $this->config->get(key: "CargoConnect.pickup_phone"),
+            "email" => $this->config->get(key: "CargoConnect.pickup_email"),
+            "company" => $this->config->get(key: "CargoConnect.pickup_company"),
+        ]);
+
         foreach ($orderIds as $orderId)
         {
             $this->report(
                 identifier: __METHOD__,
-                code: "GoExpress::Plenty.Order",
+                code: "CargoConnect::Plenty.Order",
                 references: ["orderId" => $orderId]
             );
 
@@ -92,13 +112,47 @@ class ShippingController extends Controller
                 orderId: $orderId
             );
 
+            $connectParcels = [];
+
+            foreach ($packages as $package) {
+                // determine packageType
+                $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById(
+                    shippingPackageTypeId: $package->packageId
+                );
+
+                // package dimensions
+                list($length, $width, $height) = $this->getPackageDimensions(
+                    packageType: $packageType
+                );
+
+                $connectParcels[] = pluginApp(abstract: Package::class, parameters: [
+                    "type" => $packageType->name,
+                    "length" => $length,
+                    "width" => $width,
+                    "height" => $height,
+                    "weight" => $package->weight,
+                    "colli" => 1,
+                    "content" => "Inhalt"
+                ]);
+            }
+
+            $this->submitCargoOrder(
+                payload: [
+                    "orderId" => $orderId,
+                    "pickupDate" => $shipmentDate,
+                    "sender" => $senderAddress->toArray(),
+                    "parcels" => array_map(
+                        callback: fn(Package $package) => $package->toArray(),
+                        array: $connectParcels
+                    )
+                ]
+            );
+
             $shipmentItems = $this->handleAfterRegisterShipment([], $packages[0]->id);
 
             $this->createOrderResult[$orderId] = $this->buildResultArray(
-                true,
-                "",
-                false,
-                $shipmentItems
+                success: true,
+                shipmentItems: $shipmentItems
             );
 
             $this->saveShippingInformation(
@@ -115,11 +169,11 @@ class ShippingController extends Controller
      * Retrieve labels from S3 storage
      *
      * @param Request $request
-     * @param array $orderIds
-     * @internal see GoExpressServiceProvider
+     * @param mixed $orderIds
+     * @internal see CargoConnectServiceProvider
      * @return array
      */
-    public function getLabels(Request $request, $orderIds): array
+    public function getLabels(Request $request, mixed $orderIds): array
     {
         $orderIds = $this->getOrderIds(
             request: $request,
@@ -144,8 +198,8 @@ class ShippingController extends Controller
                 )[1];
 
                 $this->getLogger(identifier: __METHOD__)->debug(
-                    code: 'CargoConnect::Webservice.S3Storage',
-                    additionalInfo: ['labelKey' => $labelKey]
+                    code: "CargoConnect::Webservice.S3Storage",
+                    additionalInfo: ["labelKey" => $labelKey]
                 );
 
                 if ($this->storageRepository->doesObjectExist(pluginName: self::PLUGIN_KEY, key: $labelKey)) {
@@ -393,7 +447,6 @@ class ShippingController extends Controller
      * Returns the package dimensions by package type
      *
      * @param $packageType
-     * @deprecated since v0.1.2
      * @return array
      */
     private function getPackageDimensions($packageType): array
@@ -431,5 +484,35 @@ class ShippingController extends Controller
         curl_close($ch);
 
         return $output;
+    }
+
+    /**
+     * @param array $payload
+     * @return array
+     */
+    private function submitCargoOrder(array $payload): array
+    {
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Authorization: Bearer " . $this->config->get(key: "CargoConnect.api_token"),
+            "Content-Type: application/json"
+        ));
+        curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url"));
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(value: $payload));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+
+        $response = curl_exec($ch);
+
+        curl_close($ch);
+
+        return json_decode(
+            json: $response,
+            associative: true
+        );
     }
 }
