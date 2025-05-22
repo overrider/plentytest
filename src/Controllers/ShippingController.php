@@ -151,6 +151,7 @@ class ShippingController extends Controller
                 ]);
             }
 
+            // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
                 payload: [
                     "orderId" => $orderId,
