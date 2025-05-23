@@ -273,7 +273,7 @@ class ShippingController extends Controller
             max: 999999
         );
 
-        $label =  $response["label"]; /*$this->download(
+        $label =  base64_decode(string: $response["label"]); /*$this->download(
             fileUrl: "https://doc.phomemo.com/Labels-Sample.pdf"
         );*/
 
@@ -289,7 +289,7 @@ class ShippingController extends Controller
         );
 
         $storageObject = $this->saveLabelToS3(
-            label: base64_decode(string: $label),
+            label: $label,
             key: $packageId . ".pdf"
         );
 
