@@ -561,6 +561,17 @@ class ShippingController extends Controller
 
         curl_close($ch);
 
+        $this->getLogger(
+            identifier: __METHOD__
+        )->debug(
+            code: "CargoConnect::Webservice.Order.Response",
+            additionalInfo: [
+                "orderResponse" => json_encode(
+                    value: $body
+                )
+            ]
+        );
+
         return json_decode(
             json: $body,
             associative: true
