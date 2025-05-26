@@ -97,7 +97,19 @@ class ShippingController extends Controller
             );
 
             $order = $this->orderRepository->findOrderById(
-                orderId: $orderId
+                orderId: $orderId,
+                with: [
+                    "warehouseSender",
+                    "warehouseSender.country"
+                ]
+            );
+
+            $this->getLogger(identifier: __METHOD__)->addReference(
+                referenceType: "orderId",
+                referenceValue: $orderId
+            )->debug(
+                code: "CargoConnect::Plenty.Order",
+                additionalInfo: ["order" => $order]
             );
 
             $receiverAddress = pluginApp(abstract: Address::class, parameters: [
@@ -111,14 +123,6 @@ class ShippingController extends Controller
                 "email" => $order->deliveryAddress->email,
                 "company" => $order->deliveryAddress->companyName
             ]);
-
-            $this->getLogger(identifier: __METHOD__)->addReference(
-                referenceType: "orderId",
-                referenceValue: $orderId
-            )->debug(
-                code: "CargoConnect::Plenty.Order",
-                additionalInfo: ["order" => $order]
-            );
 
             $packages = $this->orderShippingPackage->listOrderShippingPackages(
                 orderId: $orderId
@@ -273,9 +277,7 @@ class ShippingController extends Controller
             max: 999999
         );
 
-        $label =  base64_decode(string: $response["label"]); /*$this->download(
-            fileUrl: "https://doc.phomemo.com/Labels-Sample.pdf"
-        );*/
+        $label =  base64_decode(string: $response["label"]);
 
         $this->getLogger(
             identifier: __METHOD__
