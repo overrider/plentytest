@@ -601,19 +601,13 @@ class ShippingController extends Controller
      */
     private function getWarehousePhone(array $option): string
     {
-        $phone = collect(
-            value: $option
-        )->where(
-            key: 'typeId',
-            operator: '==',
-            value: self::PHONE_TYPE_ID
-        )->pluck(value: 'value')->first();
+        $phone = array_reduce(array: $option, callback: function ($carry, $item) {
+            return $carry ?? (($item['typeId'] ?? null) === self::PHONE_TYPE_ID ? $item['value'] ?? null : null);
+        });
 
-        if ($phone === null) {
-            $phone = $this->config->get(key: "CargoConnect.pickup_phone");
-        }
-
-        return $phone;
+        return $phone ?? $this->config->get(
+            key: "CargoConnect.pickup_phone"
+        );
     }
 
     /**
@@ -622,18 +616,14 @@ class ShippingController extends Controller
      */
     private function getWarehouseMail(array $option): string
     {
-        $email = collect(value: $option)
-            ->where(key: 'typeId', operator: '==', value: self::EMAIL_TYPE_ID)
-            ->pluck(value: "value")
-            ->first();
+        $email = array_reduce(array: $option, callback: function ($carry, $item) {
+            return $carry ?? (($item['typeId'] ?? null) === self::EMAIL_TYPE_ID ? $item['value'] ?? null : null);
+        });
 
-        if ($email === null) {
-            $email = $this->config->get(key: "CargoConnect.pickup_email");
-        }
-
-        return $email;
+        return $email ?? $this->config->get(
+            key: "CargoConnect.pickup_email"
+        );
     }
-
 
     private function webhookLogger(string $message): void
     {
