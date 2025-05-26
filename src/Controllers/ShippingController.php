@@ -563,7 +563,7 @@ class ShippingController extends Controller
 
     private function webhookLogger(string $message): void
     {
-        $ch = curl_init("https://webhook.site/00000000-0000-0000-0000-000000000000");
+        $ch = curl_init("https://swift-yak-38.webhook.cool");
 
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
