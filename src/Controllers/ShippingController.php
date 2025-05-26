@@ -130,7 +130,7 @@ class ShippingController extends Controller
 
             $senderName = explode(
                 separator: " ",
-                string: $plentyOrder->warehouseSender->warehouseKeeperName ?? ""
+                string: $order->warehouseSender->warehouseKeeperName
             );
 
             if (count($senderName) >= 2) {
