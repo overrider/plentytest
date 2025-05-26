@@ -143,7 +143,8 @@ class ShippingController extends Controller
 
             $this->webhookLogger(message: json_encode(value: [
                 "senderName" => $senderName,
-                "fullName" => $order->warehouseSender->warehouseKeeperName
+                "fullName" => $order->warehouseSender->warehouseKeeperName,
+                "senderAddress" => $order->contactSender
             ]));
 
             $senderAddress = pluginApp(abstract: Address::class,parameters: [
