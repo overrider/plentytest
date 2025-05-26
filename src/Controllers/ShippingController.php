@@ -10,6 +10,7 @@ use DateTimeInterface;
 use Plenty\Modules\Cloud\Storage\Models\StorageObject;
 use Plenty\Modules\Order\Contracts\OrderRepositoryContract;
 use Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContract;
+use Plenty\Modules\Order\Shipping\Countries\Contracts\CountryRepositoryContract;
 use Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract;
 use Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract;
 use Plenty\Modules\Order\Shipping\Package\Models\OrderShippingPackage;
@@ -59,6 +60,7 @@ class ShippingController extends Controller
      * @param \Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract $storageRepository
      * @param \Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepositoryContract $shippingInformationRepositoryContract
      * @param \Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
+     * @param \Plenty\Modules\Order\Shipping\Countries\Contracts\CountryRepositoryContract $countryRepository
      * @param \Plenty\Plugin\ConfigRepository $config
      */
     public function __construct(
@@ -67,6 +69,7 @@ class ShippingController extends Controller
         public StorageRepositoryContract $storageRepository,
         public ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
         public ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
+        public CountryRepositoryContract $countryRepository,
         public ConfigRepository $config
     ) {
        parent::__construct();
@@ -117,10 +120,6 @@ class ShippingController extends Controller
                 ]
             );
 
-            $this->webhookLogger(message: json_encode(value: [
-                "order" => $order
-            ]));
-
             $this->getLogger(identifier: __METHOD__)->addReference(
                 referenceType: "orderId",
                 referenceValue: $orderId
@@ -138,7 +137,9 @@ class ShippingController extends Controller
                 "forename" => $senderName[0] ?? $this->config->get(key: "CargoConnect.pickup_firstname"),
                 "surname" => $senderName[1] ?? $this->config->get(key: "CargoConnect.pickup_lastname"),
                 "street" => "{$order->warehouseSender->address->address1} {$order->warehouseSender->address->address2}",
-                "country" => $this->config->get(key: "CargoConnect.pickup_country"),
+                "country" => $this->countryRepository->getCountryById(
+                    countryId: $order->warehouseSender->address->countryId
+                )->isoCode2,
                 "postalCode" => $order->warehouseSender->address->postalCode,
                 "city" => $order->warehouseSender->address->town,
                 "phone" => $this->getWarehousePhone(
@@ -149,6 +150,10 @@ class ShippingController extends Controller
                 ),
                 "company" => $order->warehouseSender->name,
             ]);
+
+            $this->webhookLogger(message: json_encode(value: [
+                "sender" => $senderAddress->toArray()
+            ]));
 
             $receiverAddress = pluginApp(abstract: Address::class, parameters: [
                 "forename" => $order->deliveryAddress->firstName,
