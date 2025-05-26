@@ -38,16 +38,21 @@ class ShippingController extends Controller
 
     /**
      * The type IDs for phone
-     * @var string
+     * @var int
      */
     private const PHONE_TYPE_ID = 4;
 
     /**
      * The type IDs for email
-     * @var string
+     * @var int
      */
     private const EMAIL_TYPE_ID = 5;
 
+    /**
+     * The type ID for excluded items
+     * @var int
+     */
+    private const TYPE_ID_EXCLUDED = 6;
 
     /**
      * @var array
@@ -116,9 +121,12 @@ class ShippingController extends Controller
                 orderId: $orderId,
                 with: [
                     "warehouseSender",
-                    "warehouseSender.country"
+                    "warehouseSender.country",
+                    "orderItems.variation.propertiesV2"
                 ]
             );
+
+            $this->webhookLogger(message: json_encode(value: $order->orderItems));
 
             $this->getLogger(identifier: __METHOD__)->addReference(
                 referenceType: "orderId",
@@ -133,19 +141,9 @@ class ShippingController extends Controller
                 string: $order->warehouseSender->warehouseKeeperName
             );
 
-            if (count($senderName) >= 2) {
-                $forename = $senderName[0];
-                $surname = $senderName[1];
-            } else {
-                $forename = $this->config->get(key: "CargoConnect.pickup_firstname");
-                $surname = $this->config->get(key: "CargoConnect.pickup_lastname");
-            }
-
-            $this->webhookLogger(message: json_encode(value: [
-                "senderName" => $senderName,
-                "fullName" => $order->warehouseSender->warehouseKeeperName,
-                "senderAddress" => $order->contactSender
-            ]));
+            [$forename, $surname] = count($senderName) >= 2
+                ? [$senderName[0], $senderName[1]]
+                : [$this->config->get(key: "CargoConnect.pickup_firstname"), $this->config->get(key: "CargoConnect.pickup_lastname")];
 
             $senderAddress = pluginApp(abstract: Address::class,parameters: [
                 "forename" => $forename,
@@ -164,10 +162,6 @@ class ShippingController extends Controller
                 ),
                 "company" => $order->warehouseSender->name,
             ]);
-
-            $this->webhookLogger(message: json_encode(value: [
-                "order" => $order
-            ]));
 
             $receiverAddress = pluginApp(abstract: Address::class, parameters: [
                 "forename" => $order->deliveryAddress->firstName,
@@ -208,6 +202,8 @@ class ShippingController extends Controller
                     "content" => "Inhalt"
                 ]);
             }
+
+
 
             // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
