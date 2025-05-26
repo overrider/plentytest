@@ -133,9 +133,17 @@ class ShippingController extends Controller
                 string: $plentyOrder->warehouseSender->warehouseKeeperName ?? ""
             );
 
+            if (count($senderName) < 2) {
+                $forename = $this->config->get(key: "CargoConnect.pickup_firstname");
+                $surname = $this->config->get(key: "CargoConnect.pickup_lastname");
+            } else {
+                $forename = $senderName[0];
+                $surname = $senderName[1];
+            }
+
             $senderAddress = pluginApp(abstract: Address::class,parameters: [
-                "forename" => $senderName[0] ?? $this->config->get(key: "CargoConnect.pickup_firstname"),
-                "surname" => $senderName[1] ?? $this->config->get(key: "CargoConnect.pickup_lastname"),
+                "forename" => $forename,
+                "surname" => $surname,
                 "street" => "{$order->warehouseSender->address->address1} {$order->warehouseSender->address->address2}",
                 "country" => $this->countryRepository->getCountryById(
                     countryId: $order->warehouseSender->address->countryId

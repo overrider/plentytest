@@ -30,7 +30,7 @@ class Address
             "country" => $this->country,
             "zip" => $this->postalCode,
             "city" => $this->city,
-            "phone" => $this->phone,
+            "phone" => (string) $this->phone,
             "email" => $this->email,
             "company" => $this->company
         ];
