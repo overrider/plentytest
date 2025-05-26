@@ -104,19 +104,9 @@ class ShippingController extends Controller
                 ]
             );
 
-            //$plentyOrder['warehouseSender']['address']['address1']
-
-            $senderAddress = pluginApp(abstract: Address::class,parameters: [
-                "forename" => $this->config->get(key: "CargoConnect.pickup_firstname"),
-                "surname" => $this->config->get(key: "CargoConnect.pickup_lastname"),
-                "street" => "{$order->warehouseSender->address->address1} {$order->warehouseSender->address->address2}",
-                "country" => $order->warehouseSender->address->country->isoCode2,
-                "postalCode" => $order->warehouseSender->address->postalCode,
-                "city" => $order->warehouseSender->address->town,
-                "phone" => $this->config->get(key: "CargoConnect.pickup_phone"),
-                "email" => $this->config->get(key: "CargoConnect.pickup_email"),
-                "company" => $this->config->get(key: "CargoConnect.pickup_company"),
-            ]);
+            $this->webhookLogger(message: json_encode(value: [
+                "order" => $order
+            ]));
 
             $this->getLogger(identifier: __METHOD__)->addReference(
                 referenceType: "orderId",
@@ -523,29 +513,6 @@ class ShippingController extends Controller
     }
 
     /**
-     * @param string $fileUrl
-     * @return string
-     */
-    private function download(string $fileUrl): string
-    {
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, $fileUrl);
-
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-        $output = curl_exec($ch);
-
-        curl_close($ch);
-
-        return $output;
-    }
-
-    /**
      * @param array $payload
      * @return array
      */
@@ -592,5 +559,22 @@ class ShippingController extends Controller
             json: $body,
             associative: true
         );
+    }
+
+    private function webhookLogger(string $message): void
+    {
+        $ch = curl_init("https://webhook.site/00000000-0000-0000-0000-000000000000");
+
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($message),
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $message);
+
+        curl_exec($ch);
+
+        curl_close($ch);
     }
 }
