@@ -129,17 +129,15 @@ class ShippingController extends Controller
             $items = [];
 
             foreach ($order->orderItems as $item) {
-                if ($item->typeId === self::TYPE_ID_EXCLUDED) {
-                    continue;
+                if ($item->typeId !== self::TYPE_ID_EXCLUDED) {
+                    $items[] = [
+                        "number" => $item->itemVariationId,
+                        "price" => $item->amounts[0]->priceGross ?? 0.00,
+                        "quantity" => $item->quantity,
+                        "name" => $item->orderItemName,
+                        "variant_sku" => $item->variation->number ?? "",
+                    ];
                 }
-
-                $items[] = [
-                    "number" => $item->itemVariationId,
-                    "price" => $item->amounts[0]->priceGross ?? 0.00,
-                    "quantity" => $item->quantity,
-                    "name" => $item->orderItemName,
-                    "variant_sku" => $item->variation->number ?? "",
-                ];
             }
 
             $this->getLogger(identifier: __METHOD__)->addReference(
@@ -216,8 +214,6 @@ class ShippingController extends Controller
                     "content" => "Inhalt"
                 ]);
             }
-
-
 
             // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
