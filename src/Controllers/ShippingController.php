@@ -126,7 +126,21 @@ class ShippingController extends Controller
                 ]
             );
 
-            $this->webhookLogger(message: json_encode(value: $order->orderItems));
+            $items = [];
+
+            foreach ($order->orderItems as $item) {
+                if ($item->typeId === self::TYPE_ID_EXCLUDED) {
+                    continue;
+                }
+
+                $items[] = [
+                    "number" => $item->itemVariationId,
+                    "price" => $item->amounts[0]->priceGross ?? 0.00,
+                    "quantity" => $item->quantity,
+                    "name" => $item->orderItemName,
+                    "variant_sku" => $item->variation->number ?? "",
+                ];
+            }
 
             $this->getLogger(identifier: __METHOD__)->addReference(
                 referenceType: "orderId",
@@ -219,7 +233,8 @@ class ShippingController extends Controller
                     "packages" => array_map(
                         callback: fn(Package $package) => $package->toArray(),
                         array: $connectParcels
-                    )
+                    ),
+                    "items" => $items
                 ]
             );
 
@@ -638,22 +653,5 @@ class ShippingController extends Controller
         return $email ?? $this->config->get(
             key: "CargoConnect.pickup_email"
         );
-    }
-
-    private function webhookLogger(string $message): void
-    {
-        $ch = curl_init("https://dead-yottabyte-31.webhook.cool");
-
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Content-Length: ' . strlen($message),
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $message);
-
-        curl_exec($ch);
-
-        curl_close($ch);
     }
 }
