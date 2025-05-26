@@ -33,7 +33,20 @@ class ShippingController extends Controller
      * The plugin key
      * @var string
      */
-    const PLUGIN_KEY = "CargoConnect";
+    private const PLUGIN_KEY = "CargoConnect";
+
+    /**
+     * The type IDs for phone
+     * @var string
+     */
+    private const PHONE_TYPE_ID = 4;
+
+    /**
+     * The type IDs for email
+     * @var string
+     */
+    private const EMAIL_TYPE_ID = 5;
+
 
     /**
      * @var array
@@ -76,7 +89,7 @@ class ShippingController extends Controller
 
         $shipmentDate = date(format: "Y-m-d");
 
-        $senderAddress = pluginApp(abstract: Address::class,parameters: [
+        /*$senderAddress = pluginApp(abstract: Address::class,parameters: [
             "forename" => $this->config->get(key: "CargoConnect.pickup_firstname"),
             "surname" => $this->config->get(key: "CargoConnect.pickup_lastname"),
             "street" => $this->config->get(key: "CargoConnect.pickup_street"),
@@ -86,7 +99,7 @@ class ShippingController extends Controller
             "phone" => $this->config->get(key: "CargoConnect.pickup_phone"),
             "email" => $this->config->get(key: "CargoConnect.pickup_email"),
             "company" => $this->config->get(key: "CargoConnect.pickup_company"),
-        ]);
+        ]);*/
 
         foreach ($orderIds as $orderId)
         {
@@ -115,6 +128,27 @@ class ShippingController extends Controller
                 code: "CargoConnect::Plenty.Order",
                 additionalInfo: ["order" => $order]
             );
+
+            $senderName = explode(
+                separator: " ",
+                string: $plentyOrder->warehouseSender->warehouseKeeperName ?? ""
+            );
+
+            $senderAddress = pluginApp(abstract: Address::class,parameters: [
+                "forename" => $senderName[0] ?? $this->config->get(key: "CargoConnect.pickup_firstname"),
+                "surname" => $senderName[1] ?? $this->config->get(key: "CargoConnect.pickup_lastname"),
+                "street" => "{$order->warehouseSender->address->address1} {$order->warehouseSender->address->address2}",
+                "country" => $this->config->get(key: "CargoConnect.pickup_country"),
+                "postalCode" => $order->warehouseSender->address->postalCode,
+                "city" => $order->warehouseSender->address->town,
+                "phone" => $this->getWarehousePhone(
+                    option: $order->warehouseSender->address->options
+                ),
+                "email" => $this->getWarehouseMail(
+                    option: $order->warehouseSender->address->options
+                ),
+                "company" => $order->warehouseSender->name,
+            ]);
 
             $receiverAddress = pluginApp(abstract: Address::class, parameters: [
                 "forename" => $order->deliveryAddress->firstName,
@@ -560,6 +594,46 @@ class ShippingController extends Controller
             associative: true
         );
     }
+
+    /**
+     * @param array $option
+     * @return string
+     */
+    private function getWarehousePhone(array $option): string
+    {
+        $phone = collect(
+            value: $option
+        )->where(
+            key: 'typeId',
+            operator: '==',
+            value: self::PHONE_TYPE_ID
+        )->pluck(value: 'value')->first();
+
+        if ($phone === null) {
+            $phone = $this->config->get(key: "CargoConnect.pickup_phone");
+        }
+
+        return $phone;
+    }
+
+    /**
+     * @param array $option
+     * @return string
+     */
+    private function getWarehouseMail(array $option): string
+    {
+        $email = collect(value: $option)
+            ->where(key: 'typeId', operator: '==', value: self::EMAIL_TYPE_ID)
+            ->pluck(value: "value")
+            ->first();
+
+        if ($email === null) {
+            $email = $this->config->get(key: "CargoConnect.pickup_email");
+        }
+
+        return $email;
+    }
+
 
     private function webhookLogger(string $message): void
     {
