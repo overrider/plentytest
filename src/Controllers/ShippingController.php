@@ -104,6 +104,20 @@ class ShippingController extends Controller
                 ]
             );
 
+            //$plentyOrder['warehouseSender']['address']['address1']
+
+            $senderAddress = pluginApp(abstract: Address::class,parameters: [
+                "forename" => $this->config->get(key: "CargoConnect.pickup_firstname"),
+                "surname" => $this->config->get(key: "CargoConnect.pickup_lastname"),
+                "street" => "{$order->warehouseSender->address->address1} {$order->warehouseSender->address->address2}",
+                "country" => $order->warehouseSender->address->country->isoCode2,
+                "postalCode" => $order->warehouseSender->address->postalCode,
+                "city" => $order->warehouseSender->address->town,
+                "phone" => $this->config->get(key: "CargoConnect.pickup_phone"),
+                "email" => $this->config->get(key: "CargoConnect.pickup_email"),
+                "company" => $this->config->get(key: "CargoConnect.pickup_company"),
+            ]);
+
             $this->getLogger(identifier: __METHOD__)->addReference(
                 referenceType: "orderId",
                 referenceValue: $orderId
