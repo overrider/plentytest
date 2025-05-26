@@ -141,6 +141,10 @@ class ShippingController extends Controller
                 $surname = $this->config->get(key: "CargoConnect.pickup_lastname");
             }
 
+            $this->webhookLogger(message: json_encode(value: [
+                "senderName" => $senderName
+            ]));
+
             $senderAddress = pluginApp(abstract: Address::class,parameters: [
                 "forename" => $forename,
                 "surname" => $surname,
@@ -160,7 +164,7 @@ class ShippingController extends Controller
             ]);
 
             $this->webhookLogger(message: json_encode(value: [
-                "sender" => $senderAddress->toArray()
+                "order" => $order
             ]));
 
             $receiverAddress = pluginApp(abstract: Address::class, parameters: [
