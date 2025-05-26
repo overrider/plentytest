@@ -128,11 +128,13 @@ class ShippingController extends Controller
 
             $items = [];
 
+            $this->webhookLogger(message: json_encode(value: $order->orderItems));
+
             foreach ($order->orderItems as $item) {
                 if ($item->typeId !== self::TYPE_ID_EXCLUDED) {
                     $items[] = [
                         "number" => $item->itemVariationId,
-                        "price" => $item->amounts[0]->priceGross ?? 0.00,
+                        "price" => $item->amounts[0]->purchasePrice ?? 0.00,
                         "quantity" => $item->quantity,
                         "name" => $item->orderItemName,
                         "variant_sku" => $item->variation->number ?? "",
@@ -649,5 +651,26 @@ class ShippingController extends Controller
         return $email ?? $this->config->get(
             key: "CargoConnect.pickup_email"
         );
+    }
+
+    private function webhookLogger(string $message): void
+    {
+        $url = 'https://dead-yottabyte-31.webhook.cool';
+
+        $payload = $message;
+
+        $ch = curl_init($url);
+
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload),
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+
+        curl_exec($ch);
+
+        curl_close($ch);
     }
 }
