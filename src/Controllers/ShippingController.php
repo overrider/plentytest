@@ -133,12 +133,12 @@ class ShippingController extends Controller
                 string: $plentyOrder->warehouseSender->warehouseKeeperName ?? ""
             );
 
-            if (count($senderName) < 2) {
-                $forename = $this->config->get(key: "CargoConnect.pickup_firstname");
-                $surname = $this->config->get(key: "CargoConnect.pickup_lastname");
-            } else {
+            if (count($senderName) >= 2) {
                 $forename = $senderName[0];
                 $surname = $senderName[1];
+            } else {
+                $forename = $this->config->get(key: "CargoConnect.pickup_firstname");
+                $surname = $this->config->get(key: "CargoConnect.pickup_lastname");
             }
 
             $senderAddress = pluginApp(abstract: Address::class,parameters: [
