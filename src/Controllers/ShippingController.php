@@ -122,13 +122,15 @@ class ShippingController extends Controller
                 with: [
                     "warehouseSender",
                     "warehouseSender.country",
-                    "orderItems.variation.propertiesV2"
+                    "orderItems.variation.propertiesV2",
+                    "shippingInformation",
+                    "shippingPackages.items"
                 ]
             );
 
             $items = [];
 
-            $this->webhookLogger(message: json_encode(value: $order->orderItems));
+            $this->webhookLogger(message: json_encode(value: $order));
 
             foreach ($order->orderItems as $item) {
                 if ($item->typeId !== self::TYPE_ID_EXCLUDED) {
