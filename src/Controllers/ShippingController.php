@@ -267,7 +267,15 @@ class ShippingController extends Controller
                     additionalInfo: ["label" => $label]
                 );
 
-                $shipmentItems = $this->handleAfterRegisterShipment($response, $packages[0]->id);
+                foreach ($packages as $index => $package) {
+                    $shipmentItems[] = $this->handleAfterRegisterShipment(
+                        response: $response,
+                        packageId: $package->id,
+                        trackingIndex: $index
+                    );
+                }
+
+                //$shipmentItems = $this->handleAfterRegisterShipment($response, $packages[0]->id);
 
                 $this->createOrderResult[$orderId] = $this->buildResultArray(
                     success: true,
@@ -341,15 +349,16 @@ class ShippingController extends Controller
      *
      * @param $response
      * @param integer $packageId
+     * @param integer $trackingIndex
      * @return array
      */
-    private function handleAfterRegisterShipment($response, int $packageId): array
+    private function handleAfterRegisterShipment($response, int $packageId, int $trackingIndex): array
     {
         $shipmentItems = [];
 
-        $shipmentNumber = $response["tracking"][0];
+        $shipmentNumber = $response["tracking"][$trackingIndex];
 
-        $label =  base64_decode(string: $response["label"]);
+        $label = base64_decode(string: $response["label"]);
 
         $this->getLogger(
             identifier: __METHOD__
