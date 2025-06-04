@@ -217,6 +217,8 @@ class ShippingController extends Controller
                 ]);
             }
 
+            $this->webhookLogger(message: json_encode(value: $packages));
+
             // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
                 payload: [
@@ -655,7 +657,7 @@ class ShippingController extends Controller
 
     private function webhookLogger(string $message): void
     {
-        $url = 'https://dead-yottabyte-31.webhook.cool';
+        $url = 'https://aloof-disease-59.webhook.cool';
 
         $payload = $message;
 
