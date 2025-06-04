@@ -206,6 +206,8 @@ class ShippingController extends Controller
                     packageType: $packageType
                 );
 
+                $this->webhookLogger(message: json_encode(value: $packageType));
+
                 $connectParcels[] = pluginApp(abstract: Package::class, parameters: [
                     "type" => $packageType->name,
                     "length" => $length,
