@@ -206,6 +206,7 @@ class ShippingController extends Controller
                     packageType: $packageType
                 );
 
+                $this->webhookLogger(message: json_encode(value: $package));
                 $this->webhookLogger(message: json_encode(value: $packageType));
 
                 $connectParcels[] = pluginApp(abstract: Package::class, parameters: [
@@ -220,6 +221,7 @@ class ShippingController extends Controller
             }
 
             $this->webhookLogger(message: json_encode(value: $packages));
+            $this->webhookLogger(message: json_encode(value: $connectParcels));
 
             // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
