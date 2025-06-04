@@ -31,7 +31,9 @@ class Package
     public function toArray(): array
     {
         return [
-            'package' => $this->type,
+            'package' => $this->determinePackagingUnit(
+                value: $this->type
+            ),
             'length' => $this->length,
             'width' => $this->width,
             'height' => $this->height,
@@ -39,5 +41,21 @@ class Package
             'colli' => $this->colli,
             'contents' => $this->content
         ];
+    }
+
+    /**
+     * @param string $value
+     * @return string
+     */
+    private function determinePackagingUnit(string $value): string
+    {
+        return match ($value) {
+            "Europalette" => "Europalette",
+            "Einwegpalette" => "Einwegpalette",
+            "Halbpalette" => "Halbpalette",
+            "Sperrgutpaket" => "Sperrgutpaket",
+            "Gitterbox" => "Gitterbox",
+            default => "Paket"
+        };
     }
 }

@@ -277,6 +277,7 @@ class ShippingController extends Controller
                 $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
             } else {
                 $this->createOrderResult[$orderId] = $this->buildResultArray(
+                    success: false,
                     statusMessage: $response["error"],
                     shipmentItems: $shipmentItems
                 );
@@ -346,10 +347,7 @@ class ShippingController extends Controller
     {
         $shipmentItems = [];
 
-        $shipmentNumber = (string) rand(
-            min: 100000,
-            max: 999999
-        );
+        $shipmentNumber = $response["tracking"][0];
 
         $label =  base64_decode(string: $response["label"]);
 
