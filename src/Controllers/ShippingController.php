@@ -285,7 +285,6 @@ class ShippingController extends Controller
                 $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
             } else {
                 $this->createOrderResult[$orderId] = $this->buildResultArray(
-                    success: false,
                     statusMessage: $response["error"],
                     shipmentItems: $shipmentItems
                 );
