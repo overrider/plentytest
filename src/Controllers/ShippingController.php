@@ -359,6 +359,15 @@ class ShippingController extends Controller
 
         $label = base64_decode(string: $response["label"]);
 
+        $retrievePage = $this->retrieveLabelPage(
+            label: $label,
+            page: $trackingIndex
+        );
+
+        if (isset($retrievePage["label"])) {
+            $label = base64_decode(string: $retrievePage["label"]);
+        }
+
         $this->getLogger(
             identifier: __METHOD__
         )->debug(
@@ -624,6 +633,59 @@ class ShippingController extends Controller
             identifier: __METHOD__
         )->debug(
             code: "CargoConnect::Webservice.Order.Response",
+            additionalInfo: [
+                "orderResponse" => json_encode(
+                    value: $body
+                )
+            ]
+        );
+
+        return json_decode(
+            json: $body,
+            associative: true
+        );
+    }
+
+    /**
+     * @param string $label
+     * @param int $page
+     * @return array
+     */
+    private function retrieveLabelPage(string $label, int $page): array
+    {
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        /*        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    "Authorization: Bearer " . $this->config->get(key: "CargoConnect.api_token"),
+                    "Content-Type: application/json"
+                ));*/
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Authorization: Bearer " . "d3dd7a0c-1edd-474f-9b4f-d1b9d30559af|pVgaLNU6OBns8wtxyxeOw5eG8lXZXEaSS8KOKDtl32c8a23b",
+            "Content-Type: application/json"
+        ));
+        /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
+        curl_setopt($ch, CURLOPT_URL, "https://staging.spedition.de/api/plentyconnect/submit-order");
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(value: [
+            "base64" => $label,
+            "page" => $page
+        ]));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+
+        $response = curl_exec($ch);
+
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $body = substr($response, $headerSize);
+
+        curl_close($ch);
+
+        $this->getLogger(
+            identifier: __METHOD__
+        )->debug(
+            code: "CargoConnect::Webservice.Order.Response.Label",
             additionalInfo: [
                 "orderResponse" => json_encode(
                     value: $body
