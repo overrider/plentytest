@@ -666,7 +666,7 @@ class ShippingController extends Controller
             "Content-Type: application/json"
         ));
         /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
-        curl_setopt($ch, CURLOPT_URL, "https://staging.spedition.de/api/plentyconnect/submit-order");
+        curl_setopt($ch, CURLOPT_URL, "https://staging.spedition.de/api/plentyconnect/retrieve-label-page");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(value: [
             "base64" => $label,
