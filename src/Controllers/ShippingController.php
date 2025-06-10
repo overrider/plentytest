@@ -250,6 +250,16 @@ class ShippingController extends Controller
                     additionalInfo: ["response" => json_encode(value: $response)]
                 );
 
+                $this->getLogger(identifier: __METHOD__)->addReference(
+                    referenceType: "orderId",
+                    referenceValue: $orderId
+                )->alert(
+                    code: "CargoConnect::Plenty.Order.Error",
+                    additionalInfo: ["response" => json_encode(
+                        value: $response
+                    )]
+                );
+
                 continue;
             } else {
                 $this->getLogger(identifier: __METHOD__)->debug(
@@ -287,16 +297,6 @@ class ShippingController extends Controller
                 $this->createOrderResult[$orderId] = $this->buildResultArray(
                     statusMessage: $response["error"],
                     shipmentItems: $shipmentItems
-                );
-
-                $this->getLogger(identifier: __METHOD__)->addReference(
-                    referenceType: "orderId",
-                    referenceValue: $orderId
-                )->alert(
-                    code: "CargoConnect::Plenty.Order.Error",
-                    additionalInfo: ["response" => json_encode(
-                        value: $response
-                    )]
                 );
             }
         }
