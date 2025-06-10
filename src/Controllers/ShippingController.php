@@ -288,6 +288,16 @@ class ShippingController extends Controller
                     statusMessage: $response["error"],
                     shipmentItems: $shipmentItems
                 );
+
+                $this->getLogger(identifier: __METHOD__)->addReference(
+                    referenceType: "orderId",
+                    referenceValue: $orderId
+                )->alert(
+                    code: "CargoConnect::Plenty.Order.Error",
+                    additionalInfo: ["response" => json_encode(
+                        value: $response
+                    )]
+                );
             }
         }
 
@@ -441,13 +451,9 @@ class ShippingController extends Controller
         /** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
         $parcelServicePresetRepository = pluginApp(abstract: ParcelServicePresetRepositoryContract::class);
 
-        $preset = $parcelServicePresetRepository->getPresetById(
+        return $parcelServicePresetRepository->getPresetById(
             presetId: $parcelServicePresetId
         );
-
-        $this->webhookLogger(message: json_encode(value: $preset));
-
-        return $preset;
     }
 
     /**
