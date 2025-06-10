@@ -614,7 +614,7 @@ class ShippingController extends Controller
             "Content-Type: application/json"
         ));*/
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            "Authorization: Bearer " . "d3dd7a0c-1edd-474f-9b4f-d1b9d30559af|pVgaLNU6OBns8wtxyxeOw5eG8lXZXEaSS8KOKDtl32c8a23b",
+            "Authorization: Bearer " . "1d610778-3d82-4dcc-a69f-876e67e57126|u1PXi6RKqNPWjSta8HAerc7cgNeHYDHEvZYxIBDz9da98a55",
             "Content-Type: application/json"
         ));
        /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
@@ -664,7 +664,7 @@ class ShippingController extends Controller
                     "Content-Type: application/json"
                 ));*/
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            "Authorization: Bearer " . "d3dd7a0c-1edd-474f-9b4f-d1b9d30559af|pVgaLNU6OBns8wtxyxeOw5eG8lXZXEaSS8KOKDtl32c8a23b",
+            "Authorization: Bearer " . "1d610778-3d82-4dcc-a69f-876e67e57126|u1PXi6RKqNPWjSta8HAerc7cgNeHYDHEvZYxIBDz9da98a55",
             "Content-Type: application/json"
         ));
         /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
