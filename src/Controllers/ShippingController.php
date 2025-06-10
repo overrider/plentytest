@@ -364,6 +364,7 @@ class ShippingController extends Controller
             page: $trackingIndex
         );
 
+        // Log the retrieved page for debugging purposes
         $this->webhookLogger(message: json_encode(value: $retrievePage));
 
         if (isset($retrievePage["label"])) {
