@@ -441,9 +441,13 @@ class ShippingController extends Controller
         /** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
         $parcelServicePresetRepository = pluginApp(abstract: ParcelServicePresetRepositoryContract::class);
 
-        return $parcelServicePresetRepository->getPresetById(
+        $preset = $parcelServicePresetRepository->getPresetById(
             presetId: $parcelServicePresetId
         );
+
+        $this->webhookLogger(message: json_encode(value: $preset));
+
+        return $preset;
     }
 
     /**
