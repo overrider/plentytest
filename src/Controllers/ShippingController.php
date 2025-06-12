@@ -208,9 +208,6 @@ class ShippingController extends Controller
                     packageType: $packageType
                 );
 
-                $this->webhookLogger(message: json_encode(value: $package));
-                $this->webhookLogger(message: json_encode(value: $packageType));
-
                 $connectParcels[] = pluginApp(abstract: Package::class, parameters: [
                     "type" => $packageType->name,
                     "length" => $length,
@@ -221,9 +218,6 @@ class ShippingController extends Controller
                     "content" => "Inhalt"
                 ]);
             }
-
-            $this->webhookLogger(message: json_encode(value: $packages));
-            $this->webhookLogger(message: json_encode(value: $connectParcels));
 
             // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
             $response = $this->submitCargoOrder(
@@ -367,58 +361,58 @@ class ShippingController extends Controller
 
         $shipmentNumber = $response["tracking"][$trackingIndex];
 
-        $label = base64_decode(string: $response["label"]);
+        if ($trackingIndex === 0) {
 
-        $retrievePage = $this->retrieveLabelPage(
-            label: $label,
-            page: $trackingIndex
-        );
+            $label = base64_decode(string: $response["label"]);
 
-        // Log the retrieved page for debugging purposes
-        $this->webhookLogger(message: json_encode(value: $retrievePage));
+            /* $retrievePage = $this->retrieveLabelPage(
+                 label: $label,
+                 page: $trackingIndex
+             );
 
-        if (isset($retrievePage["label"])) {
-            $label = base64_decode(string: $retrievePage["label"]);
+             if (isset($retrievePage["label"])) {
+                 $label = base64_decode(string: $retrievePage["label"]);
+             }*/
+
+            $this->getLogger(
+                identifier: __METHOD__
+            )->debug(
+                code: "CargoConnect::Webservice.S3Storage",
+                additionalInfo: [
+                    "length" => strlen(
+                        string: $label
+                    )
+                ]
+            );
+
+            $storageObject = $this->saveLabelToS3(
+                label: $label,
+                key: $packageId . ".pdf"
+            );
+
+            $this->getLogger(
+                identifier: __METHOD__
+            )->debug(
+                code: "CargoConnect::Webservice.S3Storage",
+                additionalInfo: [
+                    "storageObject" => json_encode(
+                        value: $storageObject
+                    )
+                ]
+            );
+
+            $this->orderShippingPackage->updateOrderShippingPackage(
+                orderShippingPackageId: $packageId,
+                data: $this->buildPackageInfo(
+                    packageNumber: $shipmentNumber,
+                    labelUrl: $storageObject->key
+                )
+            );
         }
 
-        $this->getLogger(
-            identifier: __METHOD__
-        )->debug(
-            code: "CargoConnect::Webservice.S3Storage",
-            additionalInfo: [
-                "length" => strlen(
-                    string: $label
-                )
-            ]
-        );
-
-        $storageObject = $this->saveLabelToS3(
-            label: $label,
-            key: $packageId . ".pdf"
-        );
-
-        $this->getLogger(
-            identifier: __METHOD__
-        )->debug(
-            code: "CargoConnect::Webservice.S3Storage",
-            additionalInfo: [
-                "storageObject" => json_encode(
-                    value: $storageObject
-                )
-            ]
-        );
-
         $shipmentItems[] = $this->buildShipmentItems(
-            labelUrl:  "https://doc.phomemo.com/Labels-Sample.pdf",
+            labelUrl: "path_to_pdf_in_S3",
             shipmentNumber: $shipmentNumber
-        );
-
-        $this->orderShippingPackage->updateOrderShippingPackage(
-            orderShippingPackageId: $packageId,
-            data: $this->buildPackageInfo(
-                packageNumber: $shipmentNumber,
-                labelUrl: $storageObject->key
-            )
         );
 
         return $shipmentItems;
