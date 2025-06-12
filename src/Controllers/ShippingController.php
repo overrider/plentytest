@@ -135,8 +135,6 @@ class ShippingController extends Controller
 
             $items = [];
 
-            $this->webhookLogger(message: json_encode(value: $order));
-
             foreach ($order->orderItems as $item) {
                 if ($item->typeId !== self::TYPE_ID_EXCLUDED) {
                     $items[] = [
@@ -617,19 +615,16 @@ class ShippingController extends Controller
      */
     private function submitCargoOrder(array $payload): array
     {
+        $apiKey = $this->config->get(key: "CargoConnect.api_token");
+
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_HEADER, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-/*        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            "Authorization: Bearer " . $this->config->get(key: "CargoConnect.api_token"),
-            "Content-Type: application/json"
-        ));*/
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            "Authorization: Bearer " . "1d610778-3d82-4dcc-a69f-876e67e57126|u1PXi6RKqNPWjSta8HAerc7cgNeHYDHEvZYxIBDz9da98a55",
+            "Authorization: Bearer " . $apiKey,
             "Content-Type: application/json"
         ));
-       /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
         curl_setopt($ch, CURLOPT_URL, "https://staging.spedition.de/api/plentyconnect/submit-order");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(value: $payload));
@@ -667,16 +662,14 @@ class ShippingController extends Controller
      */
     private function retrieveLabelPage(string $label, int $page): array
     {
+        $apiKey = $this->config->get(key: "CargoConnect.api_token");
+
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_HEADER, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        /*        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    "Authorization: Bearer " . $this->config->get(key: "CargoConnect.api_token"),
-                    "Content-Type: application/json"
-                ));*/
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            "Authorization: Bearer " . "1d610778-3d82-4dcc-a69f-876e67e57126|u1PXi6RKqNPWjSta8HAerc7cgNeHYDHEvZYxIBDz9da98a55",
+            "Authorization: Bearer " . $apiKey,
             "Content-Type: application/json"
         ));
         /* curl_setopt($ch, CURLOPT_URL, $this->config->get(key: "CargoConnect.api_url")); */
@@ -741,26 +734,5 @@ class ShippingController extends Controller
         return $email ?? $this->config->get(
             key: "CargoConnect.pickup_email"
         );
-    }
-
-    private function webhookLogger(string $message): void
-    {
-        $url = 'https://aloof-disease-59.webhook.cool';
-
-        $payload = $message;
-
-        $ch = curl_init($url);
-
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Content-Length: ' . strlen($payload),
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-
-        curl_exec($ch);
-
-        curl_close($ch);
     }
 }
