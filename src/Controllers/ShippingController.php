@@ -60,6 +60,11 @@ class ShippingController extends Controller
     private array $createOrderResult = [];
 
     /**
+     * @var string
+     */
+    private string $labelStorageKey = "";
+
+    /**
      * @param \Plenty\Modules\Order\Contracts\OrderRepositoryContract $orderRepository
      * @param \Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract $orderShippingPackage
      * @param \Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract $storageRepository
@@ -390,6 +395,8 @@ class ShippingController extends Controller
                 key: $packageId . ".pdf"
             );
 
+            $this->labelStorageKey = $storageObject->key;
+
             $this->getLogger(
                 identifier: __METHOD__
             )->debug(
@@ -400,15 +407,15 @@ class ShippingController extends Controller
                     )
                 ]
             );
-
-            $this->orderShippingPackage->updateOrderShippingPackage(
-                orderShippingPackageId: $packageId,
-                data: $this->buildPackageInfo(
-                    packageNumber: $shipmentNumber,
-                    labelUrl: $storageObject->key
-                )
-            );
         }
+
+        $this->orderShippingPackage->updateOrderShippingPackage(
+            orderShippingPackageId: $packageId,
+            data: $this->buildPackageInfo(
+                packageNumber: $shipmentNumber,
+                labelUrl: $this->labelStorageKey
+            )
+        );
 
         $shipmentItems[] = $this->buildShipmentItems(
             labelUrl: "path_to_pdf_in_S3",
