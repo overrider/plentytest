@@ -18,13 +18,6 @@
     "default": ""
   },
   {
-    "tab": "Zugangsdaten",
-    "key": "api_url",
-    "label": "API URL",
-    "type": "text",
-    "default": "https://backpack.ironwhale.com/api/plentyconnect"
-  },
-  {
     "tab": "Abholadresse",
     "key": "pickup_company",
     "label": "Firma",
