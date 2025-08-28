@@ -49,13 +49,24 @@ class Package
      */
     private function determinePackagingUnit(string $value): string
     {
-        return match ($value) {
-            "Europalette" => "Europalette",
-            "Einwegpalette" => "Einwegpalette",
-            "Halbpalette" => "Halbpalette",
-            "Sperrgutpaket" => "Sperrgutpaket",
-            "Gitterbox" => "Gitterbox",
-            default => "Paket"
-        };
+        $normalized = strtolower($value);
+
+        if (str_contains($normalized, 'europalette')) {
+            return "Europalette";
+        }
+        if (str_contains($normalized, 'einwegpalette')) {
+            return "Einwegpalette";
+        }
+        if (str_contains($normalized, 'halbpalette')) {
+            return "Halbpalette";
+        }
+        if (str_contains($normalized, 'sperrgutpaket')) {
+            return "Sperrgutpaket";
+        }
+        if (str_contains($normalized, 'gitterbox')) {
+            return "Gitterbox";
+        }
+
+        return "Paket";
     }
 }
