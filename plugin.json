@@ -5,8 +5,8 @@
       "namespace"             : "CargoConnect",
       "author"                : "Piotr J.",
       "type"                  : "shipping",
-      "isClosedSource"        : true,
-      "version"               : "1.4.1",
+      "isClosedSource"        : false,
+      "version"               : "1.8.8",
       "license"               : "AGPL-3.0",
       "pluginIcon"            : "icon_plugin_xs.png",
       "price"                 : 0.00,
@@ -20,7 +20,7 @@
       },
       "serviceProvider": "CargoConnect\\Providers\\CargoConnectServiceProvider",
       "runOnBuild": [
-            "CargoConnect\\Migrations\\CreateReturnServiceProvider",
-            "CargoConnect\\Migrations\\CreateShippingServiceProvider"
+            "CargoConnect\\Migrations\\CreateShippingServiceProvider",
+            "CargoConnect\\Migrations\\CreateReturnServiceProvider"
       ]
 }

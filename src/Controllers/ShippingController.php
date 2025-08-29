@@ -8,7 +8,6 @@ use CargoConnect\API\Address;
 use CargoConnect\API\Package;
 use DateTimeInterface;
 use Plenty\Modules\Cloud\Storage\Models\StorageObject;
-use Plenty\Modules\Fulfillment\Services\FulfillmentReturnService;
 use Plenty\Modules\Order\Contracts\OrderRepositoryContract;
 use Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContract;
 use Plenty\Modules\Order\Shipping\Countries\Contracts\CountryRepositoryContract;
@@ -63,11 +62,6 @@ class ShippingController extends Controller
     private array $createOrderResult = [];
 
     /**
-     * @var string
-     */
-    private string $labelStorageKey = "";
-
-    /**
      * @param \Plenty\Modules\Order\Contracts\OrderRepositoryContract $orderRepository
      * @param \Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract $orderShippingPackage
      * @param \Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract $storageRepository
@@ -102,41 +96,213 @@ class ShippingController extends Controller
             orderIds: $orderIds
         );
 
-        /** @var RegisterOrderReturnsResponse $response */
-        $response = pluginApp(abstract: RegisterOrderReturnsResponse::class);
+        $shipmentDate = date(format: "Y-m-d");
 
+        /** @var RegisterOrderReturnsResponse $returnResponse */
+        $returnResponse = pluginApp(abstract: RegisterOrderReturnsResponse::class);
 
         foreach ($orderIds as $orderId) {
-            $this->report(
-                identifier: __METHOD__,
-                code: "CargoConnect::Plenty.Order.Return",
-                references: ["orderId" => $orderId]
-            );
 
-            /**
-             * @var SuccessfullyRegisteredOrderReturns $success
-             */
-            $success = pluginApp(abstract: SuccessfullyRegisteredOrderReturns::class);
-
-            $success->setOrderId(orderId: $orderId);
-            $success->setFileName(fileName: "storageKey");
-            $success->setLabelBase64(labelBase64: "label");
-           /* $success->setAvailableUntil(
-                availiableUntil: date(format: 'Y-m-d H:i:s', timestamp: strtotime(date("Y-m-d", mktime()) . " + 365 day")));*/
-            $success->setExternalNumber(externalNumber: "12345");
-            $success->setExternalData(
-                [
-                    "return_order_id" => $orderId,
-                    'url_return_pdf' => "url_return_pdf",
-                    'external_id' => "123456",
-                    'package_id' => "1",
-                    'package_type' => "test",
+            $order = $this->orderRepository->findOrderById(
+                orderId: $orderId,
+                with: [
+                    "warehouseSender",
+                    "warehouseSender.country",
+                    "orderItems.variation.propertiesV2",
+                    "shippingInformation",
+                    "shippingPackages.items"
                 ]
             );
 
+            $items = [];
+
+            foreach ($order->orderItems as $item) {
+                if ($item->typeId !== self::TYPE_ID_EXCLUDED) {
+                    $items[] = [
+                        "number" => $item->itemVariationId,
+                        "price" => $item->amounts[0]->purchasePrice ?? 0.00,
+                        "quantity" => $item->quantity,
+                        "name" => $item->orderItemName,
+                        "variant_sku" => $item->variation->number ?? "",
+                    ];
+                }
+            }
+
+            $senderName = explode(
+                separator: " ",
+                string: $order->warehouseSender->warehouseKeeperName
+            );
+
+            [$forename, $surname] = count($senderName) >= 2
+                ? [$senderName[0], $senderName[1]]
+                : [$this->config->get(key: "CargoConnect.pickup_firstname"), $this->config->get(key: "CargoConnect.pickup_lastname")];
+
+            $senderAddress = pluginApp(abstract: Address::class, parameters: [
+                "forename" => $forename,
+                "surname" => $surname,
+                "street" => "{$order->warehouseSender->address->address1} {$order->warehouseSender->address->address2}",
+                "country" => $this->countryRepository->getCountryById(
+                    countryId: $order->warehouseSender->address->countryId
+                )->isoCode2,
+                "postalCode" => $order->warehouseSender->address->postalCode,
+                "city" => $order->warehouseSender->address->town,
+                "phone" => $this->getWarehousePhone(
+                    option: $order->warehouseSender->address->options
+                ),
+                "email" => $this->getWarehouseMail(
+                    option: $order->warehouseSender->address->options
+                ),
+                "company" => $order->warehouseSender->name,
+            ]);
+
+            $receiverAddress = pluginApp(abstract: Address::class, parameters: [
+                "forename" => $order->deliveryAddress->firstName,
+                "surname" => $order->deliveryAddress->lastName,
+                "street" => "{$order->deliveryAddress->street} {$order->deliveryAddress->houseNumber}",
+                "country" => $order->deliveryAddress->country->isoCode2,
+                "postalCode" => $order->deliveryAddress->postalCode,
+                "city" => $order->deliveryAddress->town,
+                "phone" => $order->deliveryAddress->phone,
+                "email" => $order->deliveryAddress->email,
+                "company" => $order->deliveryAddress->companyName
+            ]);
+
+            $packages = $this->orderShippingPackage->listOrderShippingPackages(
+                orderId: $orderId
+            );
+
+            $connectParcels = [];
+
+            foreach ($packages as $package) {
+                // determine packageType
+                $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById(
+                    shippingPackageTypeId: $package->packageId
+                );
+
+                // package dimensions
+                list($length, $width, $height) = $this->getPackageDimensions(
+                    packageType: $packageType
+                );
+
+                $connectParcels[] = pluginApp(abstract: Package::class, parameters: [
+                    "type" => $packageType->name,
+                    "length" => $length,
+                    "width" => $width,
+                    "height" => $height,
+                    "weight" => $package->weight,
+                    "colli" => 1,
+                    "content" => "Inhalt"
+                ]);
+            }
+
+            // SUBMIT ORDER TO CARGOCONNECT AND GET RESPONSE
+            $response = $this->submitCargoReturn(
+                payload: [
+                    "orderId" => $orderId,
+                    "pickupDate" => $shipmentDate,
+                    "sender" => $senderAddress->toArray(),
+                    "receiver" => $receiverAddress->toArray(),
+                    /*"shippingProfileName" => $this->getParcelServicePreset(
+                        parcelServicePresetId: (int)$order->shippingProfileId
+                    )->backendName,*/
+                    "shippingProfileName" => "DPD Return Classic",
+                    "shippingProfileId" => $order->shippingProfileId,
+                    "packages" => array_map(
+                        callback: fn(Package $package) => $package->toArray(),
+                        array: $connectParcels
+                    ),
+                    "items" => $items
+                ]
+            );
+
+
+            if (isset($response["error"])) {
+                $this->getLogger(identifier: __METHOD__)->error(
+                    code: "CargoConnect::API.ERROR",
+                    additionalInfo: ["response" => json_encode(value: $response)]
+                );
+
+                $this->getLogger(identifier: __METHOD__)->addReference(
+                    referenceType: "orderId",
+                    referenceValue: $orderId
+                )->alert(
+                    code: "CargoConnect::Plenty.Order.Error",
+                    additionalInfo: ["response" => json_encode(
+                        value: $response
+                    )]
+                );
+
+                continue;
+            } else {
+                $this->getLogger(identifier: __METHOD__)->debug(
+                    code: "CargoConnect::API.ORDER",
+                    additionalInfo: ["response" => json_encode(value: $response)]
+                );
+            }
+
+            if (isset($response["label"])) {
+                $label = $response["label"];
+                $this->getLogger(identifier: __METHOD__)->debug(
+                    code: "CargoConnect::API.PDF",
+                    additionalInfo: ["label" => $label]
+                );
+
+                $storageKey = "return_{$packages[0]->id}.pdf";
+
+                $storageObject = $this->saveLabelToS3(
+                    label: base64_decode($label),
+                    key: $storageKey,
+                );
+
+               /* //$storageObject = $this->saveLabelToS3(base64_decode($label), $storageKey);
+
+                $labelUrl = $this->storageRepository->getObjectUrl(self::PLUGIN_KEY, $storageKey, true, 60 * 24 * 7);*/
+
+                $this->getLogger(self::PLUGIN_KEY)
+                    ->info(
+                        'return: storage data', [
+                            'storageKey' => $storageKey,
+                            'labelUrl' => $storageObject->key,
+                            'storageObject' => $storageObject,
+                            'return_order_id' => $orderId,
+                            'package_id' => $packages[0]->id
+                        ]
+                    );
+
+                /** @var SuccessfullyRegisteredOrderReturns $success */
+                $success = pluginApp(SuccessfullyRegisteredOrderReturns::class);
+
+                $success->setOrderId($orderId);
+                $success->setFileName($storageKey);
+                $success->setLabelBase64($label);
+                $success->setAvailableUntil(
+                    date('Y-m-d H:i:s', strtotime('+365 days'))
+                );
+                $success->setExternalNumber($response["tracking"][0]);
+                $success->setExternalData(
+                    [
+                        "return_order_id" => $orderId,
+                        "url_return_pdf" => $storageObject->key,
+                        "external_id" => $response["id"],
+                        "package_id" => $packages[0]->id,
+                       /* "package_type" => $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById(
+                            shippingPackageTypeId: $packages[0]->id
+                        )->name*/
+                    ]
+                );
+
+                $returnResponse->addSuccessfullyRegisteredReturns($success);
+
+                $this->report(
+                    identifier: __METHOD__,
+                    code: "CargoConnect::Plenty.Order.Return",
+                    references: ["orderId" => $orderId]
+                );
+            }
+
         }
 
-        return $response;
+        return $returnResponse;
     }
 
     public function deleteShipments(Request $request, array $orderIds): array
@@ -165,7 +331,7 @@ class ShippingController extends Controller
 
         return $this->createOrderResult;
     }
-    
+
     /**
      * @param \Plenty\Plugin\Http\Request $request
      * @param array $orderIds
@@ -369,14 +535,6 @@ class ShippingController extends Controller
         return $this->createOrderResult;
     }
 
-    public function createReturn(int $orderId, FulfillmentReturnService $returnService): void
-    {
-        $returnService->registerReturn(
-            orderId: $orderId,
-            returnProvider: "CargoConnect"
-        );
-    }
-
     /**
      * Retrieve labels from S3 storage
      *
@@ -462,8 +620,6 @@ class ShippingController extends Controller
                 key: $packageId . ".pdf"
             );
 
-            $this->labelStorageKey = $storageObject->key;
-
             $this->getLogger(
                 identifier: __METHOD__
             )->debug(
@@ -479,7 +635,7 @@ class ShippingController extends Controller
                 orderShippingPackageId: $packageId,
                 data: $this->buildPackageInfo(
                     packageNumber: $shipmentNumber,
-                    labelUrl: $this->labelStorageKey
+                    labelUrl: $storageObject->key
                 )
             );
 
@@ -701,6 +857,60 @@ class ShippingController extends Controller
             $url = "https://app.spedition.de/api/plentyconnect/submit-order";
         } else {
             $url = "https://staging.spedition.de/api/plentyconnect/submit-order";
+        }
+
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Authorization: Bearer " . $apiKey,
+            "Content-Type: application/json"
+        ));
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(value: $payload));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+
+        $response = curl_exec($ch);
+
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $body = substr($response, $headerSize);
+
+        curl_close($ch);
+
+        $this->getLogger(
+            identifier: __METHOD__
+        )->debug(
+            code: "CargoConnect::Webservice.Order.Response",
+            additionalInfo: [
+                "orderResponse" => json_encode(
+                    value: $body
+                )
+            ]
+        );
+
+        return json_decode(
+            json: $body,
+            associative: true
+        );
+    }
+
+    /**
+     * @param array $payload
+     * @return array
+     */
+    private function submitCargoReturn(array $payload): array
+    {
+        $apiKey = $this->config->get(key: "CargoConnect.api_token");
+
+        $mode = $this->config->get(key: "CargoConnect.mode");
+
+        if ($mode == 1) {
+            $url = "https://app.spedition.de/api/plentyconnect/return-order";
+        } else {
+            $url = "https://staging.spedition.de/api/plentyconnect/return-order";
         }
 
         $ch = curl_init();

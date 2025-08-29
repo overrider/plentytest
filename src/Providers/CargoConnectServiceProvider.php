@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace CargoConnect\Providers;
 
+use CargoConnect\Constant;
 use CargoConnect\Controllers\ShippingController;
-use CargoConnect\Helpers\ShippingServiceProvider;
-use Plenty\Log\Services\ReferenceContainer;
 use Plenty\Modules\Order\Shipping\Returns\Services\ReturnsServiceProviderService;
 use Plenty\Modules\Order\Shipping\ServiceProvider\Services\ShippingServiceProviderService;
 use Plenty\Plugin\ServiceProvider;
@@ -21,37 +20,30 @@ class CargoConnectServiceProvider extends ServiceProvider
     }
 
     /**
-     * @param \Plenty\Log\Services\ReferenceContainer $referenceContainer
      * @param \Plenty\Modules\Order\Shipping\ServiceProvider\Services\ShippingServiceProviderService $shippingServiceProviderService
      * @param \Plenty\Modules\Order\Shipping\Returns\Services\ReturnsServiceProviderService $returnsServiceProviderService
      * @return void
      */
-    public function boot(
-        ReferenceContainer $referenceContainer,
-        ShippingServiceProviderService $shippingServiceProviderService,
-        ReturnsServiceProviderService $returnsServiceProviderService): void
+    public function boot(ShippingServiceProviderService $shippingServiceProviderService, ReturnsServiceProviderService $returnsServiceProviderService): void
     {
-        $referenceContainer->add(referenceTypes: [
-            "CargoConnect" => "CargoConnect"
-        ]);
-
         $shippingServiceProviderService->registerShippingProvider(
-            shippingServiceProviderCode: ShippingServiceProvider::PLUGIN_NAME,
-            shippingServiceProviderNames: [
-                'de' => ShippingServiceProvider::SHIPPING_SERVICE_PROVIDER_NAME,
-                'en' => ShippingServiceProvider::SHIPPING_SERVICE_PROVIDER_NAME
+            Constant::PLUGIN_NAME,
+            [
+                "de" => "CargoInternational Connect",
+                'en' => "CargoInternational Connect"
             ],
-            shippingServiceProviderClasses: [
-                'CargoConnect\\Controllers\\ShippingController@registerShipments',
-                'CargoConnect\\Controllers\\ShippingController@getLabels',
-                'CargoConnect\\Controllers\\ShippingController@deleteShipments'
+            [
+                "CargoConnect\\Controllers\\ShippingController@registerShipments",
+                "CargoConnect\\Controllers\\ShippingController@deleteShipments",
+                "CargoConnect\\Controllers\\ShippingController@getLabels"
             ]
         );
 
         $returnsServiceProviderService->registerReturnsProvider(
-            ShippingServiceProvider::PLUGIN_NAME,
-            ShippingServiceProvider::RETURN_SERVICE_PROVIDER_NAME,
+            "CargoInternational Connect",
+            "CargoInternational Connect Retoure",
             ShippingController::class
         );
     }
 }
+
